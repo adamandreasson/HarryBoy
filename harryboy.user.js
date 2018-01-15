@@ -836,6 +836,7 @@ $.noConflict();
                 if(this.persistentData.sitter.buildTroops[i].type == troopType){
                     this.persistentData.sitter.buildTroops.splice(i,1);
                     this.saveData();
+                    this.domAdapter.redrawInfoWindow();
                     console.log("removed troop type", troopType, "from sitter queu");
                     return;
                 }
