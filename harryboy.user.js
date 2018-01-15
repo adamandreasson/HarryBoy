@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Harry Boy
 // @namespace    https://adamandreasson.se/
-// @version      1.0
+// @version      1.0.1
 // @description  Vinn på travet med Harry Boy! PS. Du måste synka med discord för att få notifikationer när saker händer, skriv !travet [travian namn] i #memes chatten
 // @author       Adam Andreasson
 // @match        https://tx3.travian.se/*
@@ -151,19 +151,9 @@ $.noConflict();
 
         this.addCountdownAlarmButtons = function(){
 
-            function hashCode (str){
-                var hash = 0;
-                if (str.length === 0) return hash;
-                for (i = 0; i < str.length; i++) {
-                    char = str.charCodeAt(i);
-                    hash = ((hash<<5)-hash)+char;
-                    hash = hash & hash; // Convert to 32bit integer
-                }
-                return hash;
-            }
-
+            //why make it compliccat even ezier to debug this wae
             function getAlertHash(name, goalTime){
-                return hashCode(name+Math.floor(goalTime/10));
+                return name+"|"+Math.round(goalTime/10);
             }
 
             jQuery(".timer[counting=down]").each(function(){
@@ -205,6 +195,7 @@ $.noConflict();
 
                 var alertLog = hb.getAlertLog();
                 for(var i = 0; i < alertLog.length; i++){
+                    console.log(alertLog[i].hash, "|||", getAlertHash(name,goalTime));
                     if(alertLog[i].hash == getAlertHash(name,goalTime))
                         content = '✓';
                 }
@@ -219,10 +210,9 @@ $.noConflict();
                 jQuery(this).text("✓");
                 var name = jQuery(this).attr("hbName");
                 var goal = jQuery(this).attr("hbGoal");
-                var user = jQuery('.playerName').text();
-                console.log("name", name, "goal", goal, "user", user);
+                console.log("name", name, "goal", goal, "user", hb.user);
 
-                hb.plebbeAlerter.sendAlert(user, name, goal);
+                hb.plebbeAlerter.sendAlert(hb.user, name, goal);
                 hb.addAlertLog({"time": Date.now(), "hash": getAlertHash(name, goal)});
 
                 event.preventDefault();
