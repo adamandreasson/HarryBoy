@@ -128,7 +128,8 @@ $.noConflict();
 
             jQuery("div#sidebarBoxVillagelist .content li").each(function(){
                 var name = jQuery(this).find(".name").text();
-                var coords = jQuery(this).find(".coordinates").text();
+                var coords = jQuery(this).find(".coordinates").text().replace(/\(|\)/g, "").split("|");
+                coords = {x: coords[0], y: coords[1]};
                 var attackComing = jQuery(this).hasClass("attack");
                 list.push({"name": name, "coords": coords, "attack": attackComing});
             });
@@ -312,6 +313,39 @@ $.noConflict();
             }
 
         };
+
+        this.addVillageSelector = function(villages){
+            if (jQuery(".coordinatesInput").length > 0 && jQuery(".merchantsAvailable").length > 0) {
+                var dom = '<div class="clear"></div><select class="hb-village-sel" style="margin-top: 5px"><option>Välj en av dina byar</option>';
+                for (var i = 0; i < villages.length; i++) {
+                    dom += '<option x="' + villages[i].coords.x + '" y="' + villages[i].coords.y + '">' + villages[i].name + '</option>';
+                }
+                dom += '</select>';
+
+                jQuery(dom).insertAfter(".coordinatesInput");
+
+                const domAdapter = this;
+                jQuery("body").on("change", ".hb-village-sel", function(event){
+                    var village = jQuery(this).find(":selected");
+                    var x = village.attr("x");
+                    var y = village.attr("y");
+
+                    if (x || y) {
+                        domAdapter.simulateInput(document.getElementById("xCoordInput"), x);
+                        domAdapter.simulateInput(document.getElementById("yCoordInput"), y);
+                    }
+                });
+            }
+        }
+        
+        this.simulateInput = function(element, text){
+            element.dispatchEvent(new KeyboardEvent("keydown"));
+            element.dispatchEvent(new KeyboardEvent("keypress"));
+            element.dispatchEvent(new KeyboardEvent("keyup"));
+
+            element.value = text;
+            element.dispatchEvent(new InputEvent("change"));
+        }
 
         this.buildTroopsAttempt = function(troopData){
 
@@ -860,6 +894,16 @@ $.noConflict();
 
         };
 
+        this.upgrade = function(){
+            if (!this.persistentData.version) {
+                // 0 --> 1
+                // Clear villages so that they'll be re-added with a coords object
+                this.persistentData.villages = [];
+                this.persistentData.version = 1;
+                this.saveData();
+            }
+        }
+
         this.init = function(){
             if (window.location.href.includes("manual.php"))
                 return;
@@ -895,8 +939,10 @@ $.noConflict();
                 "options": {
                     "trooptime": 40,
                     "pacetime": 4
-                }
+                },
+                "version": 1
             });
+            this.upgrade();
             this.user = this.domAdapter.getUser();
             console.log("loaded data", this.persistentData);
 
@@ -914,6 +960,7 @@ $.noConflict();
             this.generateNextMove();
             this.domAdapter.addCountdownAlarmButtons();
             this.domAdapter.addTroopSitterButtons();
+            this.domAdapter.addVillageSelector(this.persistentData.villages);
         };
 
     }
