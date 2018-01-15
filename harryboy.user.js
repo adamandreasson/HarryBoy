@@ -213,6 +213,8 @@ $.noConflict();
             });
 
             jQuery("body").on("click", ".harryBoyStart", function(event){
+                if (jQuery(this).text() == "✓")
+                    return;
 
                 jQuery(this).text("✓");
                 var name = jQuery(this).attr("hbName");
@@ -341,7 +343,6 @@ $.noConflict();
 
                         if(maxAmount > 1){
                             jQuery(this).find('.details input[type=text]').val(maxAmount);
-                            return;
                         }
 
                     }
@@ -870,6 +871,9 @@ $.noConflict();
         };
 
         this.init = function(){
+            if (window.location.href.includes("manual.php"))
+                return;
+
             console.log("Harry boy aktiverad");
 
             /*
