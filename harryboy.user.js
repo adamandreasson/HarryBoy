@@ -163,7 +163,7 @@ $.noConflict();
             }
 
             function getAlertHash(name, goalTime){
-                return hashCode(name+Math.round(goalTime/10));
+                return hashCode(name+Math.floor(goalTime/10));
             }
 
             jQuery(".timer[counting=down]").each(function(){
