@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Harry Boy
 // @namespace    https://adamandreasson.se/
-// @version      1.0.3
+// @version      1.0.4
 // @description  Vinn på travet med Harry Boy! PS. Du måste synka med discord för att få notifikationer när saker händer, skriv !travet [travian namn] i #memes chatten
 // @author       Adam Andreasson
 // @match        https://tx3.travian.se/*
@@ -90,10 +90,13 @@ $.noConflict();
                     var attackingVillage = jQuery(this).find("td.role").text();
                     attackingVillage = attackingVillage.replace(/[\t\n\r]/gm,'');
                     var attackTime = jQuery(this).find("tbody.infos .at").text();
+                    var type = "ATTACK";
+                    if(jQuery(this).hasClass("inRaid"))
+                        type = "RAID";
 
 
                     var timeUnix = getTimeFromString(attackTime);
-                    hostileAttacks.push({"type": "ATTACK", "from": attackingVillage, "time": timeUnix});
+                    hostileAttacks.push({"type": type, "from": attackingVillage, "time": timeUnix});
                 }
             });
 
@@ -545,7 +548,7 @@ $.noConflict();
         this.getAttackByVillage = function(village){
             for(var a in this.persistentData.activities){
                var activity = this.persistentData.activities[a];
-                if(activity.village == village.name && activity.type == "ATTACK"){
+                if(activity.village == village.name && (activity.type == "ATTACK" || activity.type == "RAID")){
                     return activity;
                 }
             }
@@ -564,7 +567,7 @@ $.noConflict();
             this.saveData();
             console.log("alerting of incoming attack");
 
-            this.plebbeAlerter.sendAlert(this.user, "Attack kommer från " + data.from + " " + new Date(data.time*1000).toString(), Date.now()/1000);
+            this.plebbeAlerter.sendAlert(this.user, data.type + " kommer i " + data.village + " från " + data.from + " " + new Date(data.time*1000).toString(), Date.now()/1000);
 
             return true;
         };
@@ -591,7 +594,7 @@ $.noConflict();
         this.clearAttacks = function(village){
             for(var a = this.persistentData.activities.length-1; a >= 0; a--){
                  var activity = this.persistentData.activities[a];
-                if(activity.village == village.name && activity.type == "ATTACK"){
+                if(activity.village == village.name && (activity.type == "ATTACK" || activity.type == "RAID")){
                     this.persistentData.activities.splice(a, 1);
                 }
             }
@@ -756,6 +759,9 @@ $.noConflict();
             var targetTime = nextAction.time;
             if(targetTime < Date.now())
                 targetTime = this.getRandomTime(1*1000, 100);
+
+            if(this.persistentData.sitter.mode == "PASSIVE" && nextAction.type == "REFRESH" && targetTime > Date.now() - 100*1000)
+                targetTime += 100*1000;
 
             var timeoutMillis = targetTime-Date.now();
 
