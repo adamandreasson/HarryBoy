@@ -15,6 +15,12 @@ $.noConflict();
 
 (function() {
 
+    Date.prototype.toString = function() {
+        return [this.getHours(), this.getMinutes(), this.getSeconds()]
+                    .map(n => n > 9 ? n : "0" + n)
+                    .join(":");
+    }
+
     function DomAdapter(){
 
         var resourceNames = ["","Trä","Lera","Järn","Vete"];
@@ -256,7 +262,7 @@ $.noConflict();
 
             for(var i = 0; i < hb.persistentData.activities.length; i++){
                 var activity = hb.persistentData.activities[i];
-                dom += '<div style="border:1px solid #cc0;padding:5px;">' + activity.type + ' i '+activity.village+' från ' + activity.from + ' ' + new Date(activity.time*1000).toString() + '</div>';
+                dom += '<div style="border:1px solid #cc0;padding:5px;">' + activity.type + ' i '+activity.village+' från ' + activity.from + ' kl ' + new Date(activity.time*1000).toString() + '</div>';
             }
 
             dom += '<div class="hb-options" style="background:#333;padding:5px;">Rävsitter i mode '+hb.persistentData.sitter.mode+'<br>';
@@ -567,7 +573,7 @@ $.noConflict();
             this.saveData();
             console.log("alerting of incoming attack");
 
-            this.plebbeAlerter.sendAlert(this.user, data.type + " kommer i " + data.village + " från " + data.from + " " + new Date(data.time*1000).toString(), Date.now()/1000);
+            this.plebbeAlerter.sendAlert(this.user, data.type + " kommer i " + data.village + " från " + data.from + " kl " + new Date(data.time*1000).toString(), Date.now()/1000);
 
             return true;
         };
