@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Harry Boy
 // @namespace    https://adamandreasson.se/
-// @version      1.0.6
+// @version      1.0.7
 // @description  Vinn på travet med Harry Boy! PS. Du måste synka med discord för att få notifikationer när saker händer, skriv !travet [travian namn] i #memes chatten
 // @author       Adam Andreasson
 // @match        https://tx3.travian.se/*
@@ -136,17 +136,23 @@ $.noConflict();
             var list = [];
 
             jQuery("div#sidebarBoxVillagelist .content li").each(function(){
+                var id = jQuery(this).children().first().attr("href").match(/newdid=(\d+)/)[1];
                 var name = jQuery(this).find(".name").text();
                 var coords = jQuery(this).find(".coordinates").text().replace(/\(|\)/g, "").split("|");
                 coords = {x: coords[0], y: coords[1]};
                 var attackComing = jQuery(this).hasClass("attack");
-                list.push({"name": name, "coords": coords, "attack": attackComing});
+                list.push({"id": id, "name": name, "coords": coords, "attack": attackComing});
+                console.log('found village ' + name);
             });
             return list;
         };
 
-        this.getActiveVillage = function(){
+        this.getActiveVillageName = function(){
             return jQuery("div#sidebarBoxActiveVillage #villageNameField").text();
+        };
+
+        this.getActiveVillageId = function(){
+            return jQuery("div#sidebarBoxVillagelist .content li.active a").attr("href").match(/newdid=(\d+)/)[1];
         };
 
         this.getProductionNumbers = function(){
@@ -490,8 +496,11 @@ $.noConflict();
             return null;
         };
 
-        this.queueActionFirst = function(action){
+        this.getVillageById = function(id) {
+            return this.persistentData.villages.find(v => v.id == id);
+        }
 
+        this.queueActionFirst = function(action){
             var time = Date.now();
 
             if(this.persistentData.actionQueue.length > 0){
@@ -522,11 +531,11 @@ $.noConflict();
         this.updateVillages = function(){
             var foundVillages = this.domAdapter.getVillageList();
 
-            for(var i in foundVillages){
+            for(var i = 0; i < foundVillages.length; i++){
                 var newVillage = foundVillages[i];
-                var pVillage = this.getVillageByName(newVillage.name);
+                var pVillage = this.getVillageById(newVillage.id);
 
-                if(pVillage === null){
+                if(pVillage == null){
 
                     console.log("found a new village!");
                     this.persistentData.villages.push(newVillage);
@@ -538,8 +547,8 @@ $.noConflict();
             }
             this.saveData();
 
-            var activeVillageName = this.domAdapter.getActiveVillage();
-            this.activeVillage = this.getVillageByName(activeVillageName);
+            var activeVillageId = this.domAdapter.getActiveVillageId();
+            this.activeVillage = this.getVillageById(activeVillageId);
         };
 
         this.updateProductionNumbers = function(){
@@ -914,6 +923,14 @@ $.noConflict();
                 this.persistentData.version = 1;
                 this.saveData();
             }
+
+            if (this.persistentData.version < 2) {
+                // 1 --> 2
+                // Clear villages again, now identified by their id
+                this.persistentData.villages = [];
+                this.persistentData.version = 2;
+                this.saveData();
+            }
         };
 
         this.init = function(){
@@ -952,7 +969,7 @@ $.noConflict();
                     "trooptime": 40,
                     "pacetime": 4
                 },
-                "version": 1
+                "version": 2
             });
             this.upgrade();
             this.user = this.domAdapter.getUser();
