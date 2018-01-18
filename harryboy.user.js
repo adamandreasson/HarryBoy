@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Harry Boy
 // @namespace    https://adamandreasson.se/
-// @version      1.0.8
+// @version      1.0.9
 // @description  Vinn på travet med Harry Boy! PS. Du måste synka med discord för att få notifikationer när saker händer, skriv !travet [travian namn] i #memes chatten
 // @author       Adam Andreasson
 // @match        https://tx3.travian.se/*
@@ -348,6 +348,15 @@ $.noConflict();
                         domAdapter.simulateInput(document.getElementById("xCoordInput"), x);
                         domAdapter.simulateInput(document.getElementById("yCoordInput"), y);
                     }
+                });
+            }
+        };
+
+        this.formatStats = function(){
+            if (window.location.href.includes("statistiken.php")) {
+                jQuery("td.pop,td.po,td.val,td.xp").each(function(){
+                    var number = toNumbersOnly(jQuery(this).text());
+                    jQuery(this).html(number.toLocaleString());
                 });
             }
         };
@@ -994,6 +1003,7 @@ $.noConflict();
             this.domAdapter.addCountdownAlarmButtons();
             this.domAdapter.addTroopSitterButtons();
             this.domAdapter.addVillageSelector(this.persistentData.villages);
+            this.domAdapter.formatStats();
         };
 
     }
