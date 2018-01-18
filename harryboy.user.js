@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Harry Boy
 // @namespace    https://adamandreasson.se/
-// @version      1.0.10
+// @version      1.0.11
 // @description  Vinn på travet med Harry Boy! PS. Du måste synka med discord för att få notifikationer när saker händer, skriv !travet [travian namn] i #memes chatten
 // @author       Adam Andreasson
 // @match        https://tx3.travian.se/*
@@ -26,7 +26,7 @@ $.noConflict();
         var resourceNames = ["","Trä","Lera","Järn","Vete"];
 
         function toNumbersOnly(str){
-            return parseInt(str.replace(/[^0-9.]/g, ""));
+            return parseInt(str.replace(/[^0-9.\-]/g, ""));
         }
 
         function getTimeFromString(str){
