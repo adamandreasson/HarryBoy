@@ -426,6 +426,26 @@ $.noConflict();
 
         };
 
+        this.addFoxSettings = function(){
+            var dom = '<div class="hb-settings">';
+            dom += 'vänta mellan uppdateringar(aktiv räv) <input type="number" class="hb-setting" style="width:40px;" setting="pacetime" value="'+hb.persistentData.options.pacetime+'"> min<br>';
+            dom += 'vänta mellan trupp bygge(aktiv räv) <input type="number" class="hb-setting" style="width:40px;" size="5" setting="trooptime" value="'+hb.persistentData.options.trooptime+'"> min<br>';
+            dom += '</div>';
+
+            jQuery("#footer").append(dom);
+
+            this.redrawInfoWindow();
+
+            jQuery("body").on("blur", ".hb-setting", function(event){
+                var setting = jQuery(this).attr("setting");
+                var val = jQuery(this).val();
+                hb.updateOption(setting, val);
+                console.log(setting, val);
+                event.preventDefault();
+                return false;
+            });
+
+        };
 
     }
 
@@ -948,6 +968,12 @@ $.noConflict();
             }
         };
 
+        this.updateOption = function(option, value){
+            console.log("setting option", option, "to", value);
+            this.persistentData.options[option] = value;
+            this.saveData();
+        };
+
         this.init = function(){
             if (window.location.href.includes("manual.php"))
                 return;
@@ -1006,6 +1032,7 @@ $.noConflict();
             this.domAdapter.addTroopSitterButtons();
             this.domAdapter.addVillageSelector(this.persistentData.villages);
             this.domAdapter.formatStats();
+            this.domAdapter.addFoxSettings();
         };
 
     }
