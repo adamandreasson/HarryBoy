@@ -267,7 +267,7 @@ $.noConflict();
 
             for(var i = 0; i < hb.persistentData.activities.length; i++){
                 var activity = hb.persistentData.activities[i];
-                dom += '<div style="border:1px solid #cc0;padding:5px;">' + activity.type + ' i '+activity.village+' från ' + activity.from + ' kl ' + new Date(activity.time*1000).toString() + '</div>';
+                dom += '<div style="border:1px solid #cc0;padding:5px;">' + activity.type + ' i '+activity.village+'<br />från ' + activity.from + '<br />kl ' + new Date(activity.time*1000).toString() + '</div>';
             }
 
             dom += '<div class="hb-options" style="background:#333;padding:5px;">Rävsitter i mode '+hb.persistentData.sitter.mode+'<br>';
