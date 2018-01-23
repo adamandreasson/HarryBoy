@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Harry Boy
 // @namespace    https://adamandreasson.se/
-// @version      1.0.14
+// @version      1.0.15
 // @description  Vinn på travet med Harry Boy! PS. Du måste synka med discord för att få notifikationer när saker händer, skriv !travet [travian namn] i #memes chatten
 // @author       Adam Andreasson
 // @match        https://tx3.travian.se/*
@@ -916,7 +916,7 @@ $.noConflict();
             console.log("toggle troop type ", troopType);
 
             for(var i = this.persistentData.sitter.buildTroops.length-1; i >= 0; i--){
-                if(this.persistentData.sitter.buildTroops[i].type == troopType){
+                if(this.persistentData.sitter.buildTroops[i].type == troopType && this.persistentData.sitter.buildTroops[i].village == this.activeVillage.name){
                     this.persistentData.sitter.buildTroops.splice(i,1);
                     this.saveData();
                     this.domAdapter.redrawInfoWindow();
