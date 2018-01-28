@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Harry Boy
 // @namespace    https://adamandreasson.se/
-// @version      1.0.17
+// @version      1.1.0
 // @description  Vinn på travet med Harry Boy! PS. Du måste synka med discord för att få notifikationer när saker händer, skriv !travet [travian namn] i #memes chatten
 // @author       Adam Andreasson
 // @match        https://tx3.travian.se/*
@@ -40,10 +40,7 @@ $.noConflict();
                 date.setTime(date.getTime() + 1000*60*60*24);
             }
 
-            console.log(date);
-            console.log(date.getTime());
-
-            return Math.round(date.getTime()/1000);
+            return Math.floor(date.getTime()/1000);
         }
 
         function formatResources(resources){
@@ -283,18 +280,44 @@ $.noConflict();
                 event.preventDefault();
                 return false;
             });
+
+            jQuery("body").on("click", ".hb-action-remove", function(event){
+                var actionIndex = jQuery(this).attr("hbAction");
+                hb.dropAction(actionIndex);
+                event.preventDefault();
+                return false;
+            });
         };
 
         this.redrawInfoWindow = function(){
+
             var dom = '🦊 Harry Boy';
             dom += '<div class="hb-status" style="color:#ddd;font-size:0.9em;">'+hb.status+'</div>';
 
-            for(var i = 0; i < hb.persistentData.activities.length; i++){
-                var activity = hb.persistentData.activities[i];
-                dom += '<div style="border:1px solid #cc0;padding:5px;">' + activity.type + ' i '+activity.village+'<br />från ' + activity.from + '<br />kl ' + new Date(activity.time*1000).toString() + '</div>';
+            for(var i = 0; i < hb.persistentData.actionQueue.length; i++){
+                var action = hb.persistentData.actionQueue[i];
+                var content = '' + action.type + ' / '+action.village+ '<br />';
+                var customLook = 'border:1px solid #444;background:#333;';
+                if(action.type == "SEND_TROOPS"){
+                    customLook = 'border:1px solid #0D3B4A;background:#092C38;';
+                    content = 'Trupper skickas från '+action.village+'<br>Mål: '+action.targetName+'<br />landar kl ' + new Date(action.strikeTime*1000).toString() + '';
+                }
+                dom += '<div style="'+customLook+'margin:2px 0;padding:5px;"><button class="hb-action-remove" hbAction="'+i+'" style="color:#e00; padding:2px; margin-right:10px;">x</button><span style="color:#ddd;">kl ' + new Date(action.time).toString() + '</span><br>';
+
+                    dom += content;
+
+                dom += '</div>';
             }
 
-            dom += '<div class="hb-options" style="background:#333;padding:5px;">Rävsitter i mode '+hb.persistentData.sitter.mode+'<br>';
+            for(var i = 0; i < hb.persistentData.activities.length; i++){
+                var activity = hb.persistentData.activities[i];
+                if(activity.type == "ATTACK" || activity.type == "RAID")
+                    dom += '<div style="border:1px solid #cc0;padding:5px;">' + activity.type + ' i '+activity.village+'<br />från ' + activity.from + '<br />kl ' + new Date(activity.time*1000).toString() + '</div>';
+                else
+                    dom += '<div style="border:1px solid #0c0;padding:5px;">' + activity.type + ' i '+activity.village+ '<br />kl ' + new Date(activity.time*1000).toString() + '</div>';
+            }
+
+            dom += '<div class="hb-options" style="background:#1a1a1a;padding:5px;">Rävsitter i mode '+hb.persistentData.sitter.mode+'<br>';
 
             if(hb.persistentData.sitter.mode == "ACTIVE"){
                 dom += '<div class="hb-building">';
@@ -350,6 +373,69 @@ $.noConflict();
                 });
 
             }
+
+        };
+
+        this.addAttackScheduler = function(){
+
+            if(jQuery("#build.gid16 #rallyPointButtonsContainer").length < 1)
+                return;
+
+            var dom = '<div class="hb-troop-sender" style="border:1px solid #ccc; padding:5px; display:inline-block;">';
+            dom += '🦊 Schemalägg så trupperna kommer fram ';
+            dom += '<input type="text" class="hb-troop-sendtime" value="00:00:00" style="width:80px;"> <button style="border:1px solid #ccc; padding:2px; margin-right:10px;" class="hb-troop-schedule">Spara</button>';
+            dom += '</div>';
+
+            jQuery("#build.gid16 form").append(dom);
+
+            jQuery("body").on("click", ".hb-troop-schedule", function(event){
+                var rawTime = jQuery(".hb-troop-sendtime").val();
+
+                var attackData = {};
+
+                jQuery(this).closest("form").find("input").each(function(){
+
+                    if(jQuery(this).attr("name") == null)
+                        return;
+
+                    if(jQuery(this).attr("name").length < 4 && jQuery(this).attr("name").charAt(0) == "t"){
+                        attackData[jQuery(this).attr("name")] = jQuery(this).val();
+                    }
+
+                    if(jQuery(this).attr("name") == "x" || jQuery(this).attr("name") == "y" || jQuery(this).attr("name") == "dname" || jQuery(this).attr("name") == "c"){
+                        attackData[jQuery(this).attr("name")] = jQuery(this).val();
+                    }
+
+                });
+
+                var targetName = jQuery("#short_info tr td").text();
+                targetName = targetName.replace(/[\t\n\r]/gm,'');
+                console.log(targetName);
+
+                var inRaw = jQuery(".troop_details .infos .in").text();
+
+                var inSplit = inRaw.split(":");
+
+                var inHours = toNumbersOnly(inSplit[0]);
+                var inMinutes = toNumbersOnly(inSplit[1]);
+                var inSeconds = toNumbersOnly(inSplit[2]);
+
+                var troopTravelTime = inHours*60*60 + inMinutes*60 + inSeconds;
+
+                var timeSplit = rawTime.split(":");
+                if(timeSplit.length != 3 || rawTime.length != 8){
+                    alert("nu gör du fel.... formatet e ju hh:mm:ss");
+                    event.preventDefault();
+                    return false;
+                }
+                var strikeTime = getTimeFromString(rawTime);
+                var targetTime = strikeTime - troopTravelTime;
+                console.log(new Date(targetTime*1000).toString());
+
+                hb.scheduleAttack(targetTime, strikeTime, targetName, attackData);
+                event.preventDefault();
+                return false;
+            });
 
         };
 
@@ -474,6 +560,56 @@ $.noConflict();
 
         };
 
+        this.sendTroops = function(action){
+
+            if(action.stage == "START" || action.stage == "PREPARE"){
+
+                console.log("prepare troops", action);
+
+                if(window.location.href != action.url){
+                    action.time += 1000;
+                    action.stage = "PREPARE";
+                    hb.queueAction(action);
+                    this.goToUrl(action.url);
+                    return;
+                }
+
+                for(var domName in action.attackData){
+                    console.log(domName);
+                    var val = action.attackData[domName];
+                    if(val != "" && val != 0)
+                        jQuery("input[name="+domName+"]").val(val);
+                }
+                action.stage = "SEND";
+                action.time = action.sendTime;
+                hb.queueAction(action);
+
+                setTimeout(function(){
+                    jQuery("form button[name=s1]").trigger('click');
+                }, 200);
+
+            }else{
+
+                console.log("send troops", action);
+
+                if(jQuery("#build.gid16 #rallyPointButtonsContainer").length < 1){
+                    hb.plebbeAlerter.sendAlert(hb.user, "Kunde inte skicka attack ://", 0);
+                    return;
+                }
+
+                jQuery(".a2b form").append('<div style="font-size:20px;color:#f00;font-weight:bold;">SKICKAR TRUPPER VILKEN SEKUND SOM HELST NU!!!</div>');
+
+                var actualArrivalTime = getTimeFromString(jQuery(".troop_details .infos .timer").text());
+                var wait = (action.strikeTime - actualArrivalTime);
+                setTimeout(function(){
+                    console.log("REEEEE");
+                    jQuery("#rallyPointButtonsContainer button[name=s1]").trigger('click');
+                }, wait*1000 - 1550);
+
+            }
+
+        };
+
     }
 
     function PlebbeAlerter(){
@@ -560,7 +696,7 @@ $.noConflict();
 
         this.getVillageById = function(id) {
             return this.persistentData.villages.find(v => v.id == id);
-        }
+        };
 
         this.queueActionFirst = function(action){
             var time = Date.now();
@@ -580,7 +716,7 @@ $.noConflict();
 
             for(var i in this.persistentData.actionQueue){
                 var otherAction = this.persistentData.actionQueue[i];
-                if(otherAction.type == action.type && otherAction.village == action.village)
+                if(otherAction.type == action.type && otherAction.village == action.village && action.type != "SEND_TROOPS")
                     return;
             }
 
@@ -727,7 +863,7 @@ $.noConflict();
 
                 for(var m in movements){
                     var movement = movements[m];
-                    if(movement.type == "ATTACK" || movement.type == "ATTACK_SELF"){
+                    if(movement.type == "ATTACK" || movement.type == "ATTACK_SELF" || movement.type == "ATTACK_OUT"){
                         this.domAdapter.goToUrl(movement.url);
                     }
                 }
@@ -756,13 +892,9 @@ $.noConflict();
             console.log("gotta buiild them troops according to this", triggerAction);
 
             if(window.location.href !== triggerAction.troopData.url){
-                this.queueActionFirst({
-                    "type": "CUSTOM_URL",
-                    "village" : triggerAction.village,
-                    "time": this.getRandomTime(5*1000, 1*1000),
-                    "url": triggerAction.troopData.url
-                });
-                this.setNextActionTimer();
+                triggerAction.time += 2000;
+                this.queueAction(triggerAction);
+                this.domAdapter.goToUrl(triggerAction.troopData.url);
                 return;
             }
 
@@ -779,6 +911,7 @@ $.noConflict();
                 this.plebbeAlerter.sendAlert(this.user, "Bygger " + numTroops + " " + triggerAction.troopData.name + " i " + triggerAction.troopData.village, Date.now()/1000);
                 setTimeout(this.domAdapter.buildTroopsCommit, 2000);
             }else{
+                console.log("aw man cant build anytihng....");
                 this.domAdapter.goToFields();
             }
 
@@ -807,6 +940,10 @@ $.noConflict();
                     hb.buildTroops(action);
                     break;
 
+                case "SEND_TROOPS":
+                    hb.domAdapter.sendTroops(action);
+                    break;
+
                 case "CUSTOM_URL":
                     hb.domAdapter.goToUrl(action.url);
                     break;
@@ -818,6 +955,9 @@ $.noConflict();
         };
 
         this.setNextActionTimer = function(){
+            if(this.nextUpdate != null)
+                return;
+
             var nextAction = this.getNextAction();
             if(nextAction === null){
                 this.setStatus("chillar");
@@ -844,8 +984,13 @@ $.noConflict();
             if(targetTime < Date.now())
                 targetTime = this.getRandomTime(1*1000, 100);
 
-            if(this.persistentData.sitter.mode == "PASSIVE" && nextAction.type == "REFRESH" && targetTime > Date.now() - 100*1000)
-                targetTime += 100*1000;
+            // passive refreshes will be delayed so they dont disturb manual navigation
+            if(this.persistentData.sitter.mode == "PASSIVE" && nextAction.type == "REFRESH" && targetTime > Date.now() - 100*1000){
+                this.removeFirstAction();
+                this.generateNextMove();
+                nextAction = this.getNextAction();
+                targetTime = nextAction.time;
+            }
 
             var timeoutMillis = targetTime-Date.now();
 
@@ -865,16 +1010,33 @@ $.noConflict();
 
             //something went wrong clearly... just go to something we know
             if((targetTime-Date.now())/1000 < -100){
-                domAdapter.goToFields();
+                this.domAdapter.goToFields();
             }
         };
 
         this.generateNextMove = function(){
             console.log("sitter mode", this.persistentData.sitter.mode);
+
+            var hasScheduledAction = false;
+
             if(this.persistentData.sitter.mode == "IDLE"){
                 this.setStatus("chillar");
                 return;
             }
+
+            var nextAction = this.getNextAction();
+            if(nextAction != null){
+                hasScheduledAction = true;
+                console.log("time until next action", (nextAction.time - Date.now()));
+                if(nextAction.time - Date.now() > this.persistentData.options.pacetime*60*3*1000){
+                    hasScheduledAction = false;
+                }
+                if(nextAction.type == "PREPARE_TROOPS" || nextAction.type == "SEND_TROOPS" && hasScheduledAction){
+                    console.log("lets not disturb next action here now boi", new Date(nextAction.time*1000).toString());
+                    return;
+                }
+            }
+
             if(this.persistentData.sitter.mode == "ACTIVE"){
 
                 if(this.persistentData.sitter.buildTroops.length > 0){
@@ -893,6 +1055,7 @@ $.noConflict();
                             "troopData": troops
                         };
                         this.queueAction(nextAction);
+                        hasScheduledAction = true;
                     }else{
                         this.persistentData.sitter.buildTroops[0].estimate = this.persistentData.sitter.buildTroops[this.persistentData.sitter.buildTroops.length-1].lastbuild + 1000*60*this.persistentData.options.trooptime;
                         console.log("troops were built within last ",this.persistentData.options.trooptime," minutes");
@@ -900,7 +1063,7 @@ $.noConflict();
 
                 }
 
-                if(this.getNextAction() === null){
+                if(!hasScheduledAction){
                     var rand = Math.floor(Math.random() * Math.floor(this.persistentData.villages.length-1));
                     var randomVillage = this.persistentData.villages[rand];
                     var nextAction = {
@@ -913,19 +1076,23 @@ $.noConflict();
 
             }else if(this.persistentData.sitter.mode == "PASSIVE"){
 
-                var nextAction = {
-                    "type": "REFRESH",
-                    "village" : null,
-                    "time": this.getRandomTime(this.persistentData.options.pacetime*60*1000, this.persistentData.options.pacetime*6*1000)
-                };
-                this.queueAction(nextAction);
+                if(!hasScheduledAction){
+                    var nextAction = {
+                        "type": "REFRESH",
+                        "village" : null,
+                        "time": this.getRandomTime(this.persistentData.options.pacetime*60*1000, this.persistentData.options.pacetime*6*1000)
+                    };
+                    this.queueAction(nextAction);
+                }
 
             }
 
+/*
             if(this.nextUpdate === null){
                 this.setNextActionTimer();
             }
-        };
+  */
+  };
 
         this.toggleSitter = function(mode){
             var sitter = this.persistentData.sitter;
@@ -934,7 +1101,6 @@ $.noConflict();
             clearTimeout(this.nextUpdate);
             this.counterInterval = null;
             this.nextUpdate = null;
-            this.persistentData.actionQueue = [];
 
             if(sitter.mode == "IDLE" || sitter.mode != mode){
                 sitter.mode = mode;
@@ -949,6 +1115,7 @@ $.noConflict();
                 }
             }
 
+            this.setNextActionTimer();
             this.domAdapter.redrawInfoWindow();
             this.saveData();
 
@@ -992,6 +1159,46 @@ $.noConflict();
 
             this.plebbeAlerter.sendAlert(this.user, msg, Date.now()/1000);
 
+        };
+
+        this.scheduleAttack = function(time, strikeTime, targetName, attackData){
+
+            console.log("gotta scheudule", time, attackData);
+
+            //this.persistentData.activities.push({"type": "SEND_TROOPS", "village": this.activeVillage.name, "time": time, "strikeTime": strikeTime, "targetName": targetName, "attackData": attackData, "url": window.location.href});
+
+            console.log("time to prepare troops boi!!");
+
+            var nextAction = {
+                "type": "SEND_TROOPS",
+                "village" : this.activeVillage.name,
+                "strikeTime": strikeTime,
+                "targetName": targetName,
+                "attackData": attackData,
+                "url": window.location.href,
+                "stage" : "START",
+                "time": this.getRandomTimeBeforeTime(15*1000, 1000, (time-1)*1000),
+                "sendTime": time
+            };
+            this.queueAction(nextAction);
+
+            this.saveData();
+            this.domAdapter.redrawInfoWindow();
+
+        };
+
+        this.dropAction = function(index){
+            console.log("remove activity index ", index);
+            this.persistentData.actionQueue.splice(index, 1);
+            this.saveData();
+            this.domAdapter.redrawInfoWindow();
+
+            if(index == 0){
+                clearInterval(this.counterInterval);
+                clearTimeout(this.nextUpdate);
+                this.generateNextMove();
+                this.setNextActionTimer();
+            }
         };
 
         this.upgrade = function(){
@@ -1090,10 +1297,11 @@ $.noConflict();
             this.updateProductionNumbers();
             this.controlForAttacks();
             this.checkStocks();
-            this.setNextActionTimer();
             this.generateNextMove();
+            this.setNextActionTimer();
             this.domAdapter.addCountdownAlarmButtons();
             this.domAdapter.addTroopSitterButtons();
+            this.domAdapter.addAttackScheduler();
             this.domAdapter.addVillageSelector(this.persistentData.villages);
             this.domAdapter.formatStats();
             this.domAdapter.addFoxSettings();
