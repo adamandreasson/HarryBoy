@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Harry Boy
 // @namespace    https://adamandreasson.se/
-// @version      1.0.16
+// @version      1.0.17
 // @description  Vinn på travet med Harry Boy! PS. Du måste synka med discord för att få notifikationer när saker händer, skriv !travet [travian namn] i #memes chatten
 // @author       Adam Andreasson
 // @match        https://tx3.travian.se/*
@@ -278,7 +278,8 @@ $.noConflict();
             jQuery("body").on("click", ".hb-sitter-queue", function(event){
                 var troops = jQuery(this).attr("hbTroop");
                 var troopName = jQuery(this).attr("hbTroopName");
-                hb.toggleSitterTroops(troops, troopName);
+                var village = jQuery(this).attr("hbVillage");
+                hb.toggleSitterTroops(troops, troopName, village);
                 event.preventDefault();
                 return false;
             });
@@ -303,6 +304,7 @@ $.noConflict();
 
             for(var i = 0; i < hb.persistentData.sitter.buildTroops.length; i++){
                 var troopData = hb.persistentData.sitter.buildTroops[i];
+                var villageName = hb.getVillageById(troopData.village).name || '???';
                 var est = "";
                 if('estimate' in troopData && troopData.estimate !== null){
                     var estMinutes = (troopData.estimate - Date.now())/60/1000;
@@ -310,7 +312,7 @@ $.noConflict();
                         estMinutes = 0;
                     est = '(om ca '+estMinutes.toFixed(1) + " min)";
                 }
-                dom += (i+1) + '. Kommer bygga '+troopData.name+' i ' + troopData.village + ' <button class="hb-sitter-queue" hbTroop="'+troopData.type+'" hbTroopName="'+troopData.name+'" style="color:#e00; padding:2px; margin-right:10px;">x</button> '+est+'<br>';
+                dom += (i+1) + '. Kommer bygga '+troopData.name+' i ' + villageName + ' <button class="hb-sitter-queue" hbTroop="'+troopData.type+'" hbTroopName="'+troopData.name+'" hbVillage="'+troopData.village+'" style="color:#e00; padding:2px; margin-right:10px;">x</button> '+est+'<br>';
             }
 
             dom += '</div>';
@@ -336,13 +338,13 @@ $.noConflict();
 
             if(jQuery("form .buildActionOverview").length > 0){
 
-
                 jQuery(".trainUnits .action").each(function(){
                     var troopFullName =  jQuery(this).find('.bigUnitSection img.unitSection').attr("alt");
 
                     var troopName =  jQuery(this).find('.details input[type=text]').attr("name");
 
-                    var foxButton = '<button class="hb-sitter-queue" hbActive="nope" hbTroop="'+troopName+'" hbTroopName="'+troopFullName+'" style="border:1px solid #ccc; padding:2px; margin-right:10px;">🦊 Köa hos rävsitter</button>';
+                    var foxButton = '<button class="hb-sitter-queue" hbActive="nope" hbTroop="'+troopName+'" hbTroopName="'+troopFullName
+                            +'" hbVillage="'+hb.activeVillage.id+'" style="border:1px solid #ccc; padding:2px; margin-right:10px;">🦊 Köa hos rävsitter</button>';
 
                     jQuery(this).find('.details').append(foxButton);
                 });
@@ -952,11 +954,11 @@ $.noConflict();
 
         };
 
-        this.toggleSitterTroops = function(troopType, troopName){
+        this.toggleSitterTroops = function(troopType, troopName, village){
             console.log("toggle troop type ", troopType);
 
             for(var i = this.persistentData.sitter.buildTroops.length-1; i >= 0; i--){
-                if(this.persistentData.sitter.buildTroops[i].type == troopType && this.persistentData.sitter.buildTroops[i].village == this.activeVillage.name){
+                if(this.persistentData.sitter.buildTroops[i].type == troopType && this.persistentData.sitter.buildTroops[i].village == village){
                     this.persistentData.sitter.buildTroops.splice(i,1);
                     this.saveData();
                     this.domAdapter.redrawInfoWindow();
@@ -968,7 +970,7 @@ $.noConflict();
             this.persistentData.sitter.buildTroops.push({
                 "type": troopType,
                 "name": troopName,
-                "village": this.activeVillage.name,
+                "village": village,
                 "url": window.location.href,
                 "lastbuild": 0
             });
@@ -1017,6 +1019,14 @@ $.noConflict();
                 this.persistentData.version = 3;
                 this.saveData();
             }
+
+            if (this.persistentData.version < 4) {
+                // 3 --> 4
+                // Reset troop builder data, add village id
+                this.persistentData.sitter.buildTroops = [];
+                this.persistentData.version = 4;
+                this.saveData();
+            }
         };
 
         this.updateOption = function(option, value){
@@ -1063,7 +1073,7 @@ $.noConflict();
                     "savedUsername": null,
                     "savedPassword": null
                 },
-                "version": 3
+                "version": 4
             });
             this.upgrade();
             this.user = this.domAdapter.getUser();
