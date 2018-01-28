@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Harry Boy
 // @namespace    https://adamandreasson.se/
-// @version      1.0.15
+// @version      1.0.16
 // @description  Vinn på travet med Harry Boy! PS. Du måste synka med discord för att få notifikationer när saker händer, skriv !travet [travian namn] i #memes chatten
 // @author       Adam Andreasson
 // @match        https://tx3.travian.se/*
@@ -70,6 +70,27 @@ $.noConflict();
 
         this.getUser = function(){
             return jQuery('.playerName').text().replace(/[\t\n\r]/gm,'').trim();
+        };
+
+        this.attemptLogin = function(user, pass){
+            if(user == null || user == "")
+                return;
+
+            if(jQuery(".outerLoginBox").length > 0){
+                setTimeout(function(){
+                    console.log("we can login");
+                    console.log("eyy", jQuery('tr.account input').val());
+                    jQuery('tr.account input').val(user);
+                    jQuery('tr.pass input').val(pass);
+
+                    setTimeout(function(){
+                        jQuery(".outerLoginBox #s1").trigger('click');
+                        console.log("logging in....");
+                    },1700);
+
+                },2000);
+            }
+
         };
 
         this.changeVillage = function(village){
@@ -151,6 +172,8 @@ $.noConflict();
         };
 
         this.getActiveVillageId = function(){
+            if(jQuery("div#sidebarBoxVillagelist .content li.active a").length < 1)
+                return null;
             return jQuery("div#sidebarBoxVillagelist .content li.active a").attr("href").match(/newdid=(\d+)/)[1];
         };
 
@@ -430,6 +453,8 @@ $.noConflict();
             var dom = '<div class="hb-settings">';
             dom += 'vänta mellan uppdateringar(aktiv räv) <input type="number" class="hb-setting" style="width:40px;" setting="pacetime" value="'+hb.persistentData.options.pacetime+'"> min<br>';
             dom += 'vänta mellan trupp bygge(aktiv räv) <input type="number" class="hb-setting" style="width:40px;" size="5" setting="trooptime" value="'+hb.persistentData.options.trooptime+'"> min<br>';
+            dom += 'auto login namn <input type="text" class="hb-setting" style="width:90px;" setting="savedUsername" value="'+hb.persistentData.options.savedUsername+'"><br>';
+            dom += 'auto login pass <input type="password" class="hb-setting" style="width:90px;" setting="savedPassword" value="'+hb.persistentData.options.savedPassword+'"><br>';
             dom += '</div>';
 
             jQuery("#footer").append(dom);
@@ -584,7 +609,8 @@ $.noConflict();
             this.saveData();
 
             var activeVillageId = this.domAdapter.getActiveVillageId();
-            this.activeVillage = this.getVillageById(activeVillageId);
+            if(activeVillageId != null)
+                this.activeVillage = this.getVillageById(activeVillageId);
         };
 
         this.updateProductionNumbers = function(){
@@ -796,6 +822,11 @@ $.noConflict();
                 return;
             }
 
+            if(this.activeVillage == null){
+                this.setStatus("<b>INTE INLOGGAD??? Spara inlogg i Chrome för att harry boy ska logga in igen automatiskt!!</b>");
+                return;
+            }
+
             if(nextAction.village != this.activeVillage.name && nextAction.type != "CHANGE_VILLAGE" && nextAction.village !== null){
 
                 nextAction = {
@@ -819,12 +850,21 @@ $.noConflict();
             console.log("executing action in ", timeoutMillis, nextAction);
             clearInterval(this.counterInterval);
             this.counterInterval = setInterval(function(){
-                hb.setStatus(nextAction.type + " om " + Math.round( (targetTime-Date.now()) /1000) + " sek");
+                hb.updateActionCountdown(nextAction.type, targetTime);
             }, 1000);
 
             var ds = this.domAdapter;
             this.nextUpdate = setTimeout(this.executeAction, timeoutMillis);
 
+        };
+
+        this.updateActionCountdown = function(actionType, targetTime){
+            hb.setStatus(actionType + " om " + Math.round( (targetTime-Date.now()) /1000) + " sek");
+
+            //something went wrong clearly... just go to something we know
+            if((targetTime-Date.now())/1000 < -100){
+                domAdapter.goToFields();
+            }
         };
 
         this.generateNextMove = function(){
@@ -968,6 +1008,15 @@ $.noConflict();
                 this.persistentData.version = 2;
                 this.saveData();
             }
+
+            if (this.persistentData.version < 3) {
+                // 2 --> 3
+                // Add user login settings
+                this.persistentData.options.savedUsername = null;
+                this.persistentData.options.savedPassword = null;
+                this.persistentData.version = 3;
+                this.saveData();
+            }
         };
 
         this.updateOption = function(option, value){
@@ -1010,9 +1059,11 @@ $.noConflict();
                 "alerts": [],
                 "options": {
                     "trooptime": 40,
-                    "pacetime": 4
+                    "pacetime": 4,
+                    "savedUsername": null,
+                    "savedPassword": null
                 },
-                "version": 2
+                "version": 3
             });
             this.upgrade();
             this.user = this.domAdapter.getUser();
@@ -1020,6 +1071,7 @@ $.noConflict();
 
             this.persistentData.activities.sort(function(a,b) {return (a.time > b.time) ? 1 : ((b.time > a.time) ? -1 : 0);} );
 
+            this.domAdapter.attemptLogin(this.persistentData.options.savedUsername, this.persistentData.options.savedPassword);
             this.domAdapter.addInfoWindow();
             this.clearOldActivities();
             this.updateVillages();
