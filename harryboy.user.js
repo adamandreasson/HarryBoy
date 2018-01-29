@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Harry Boy
 // @namespace    https://adamandreasson.se/
-// @version      1.1.0
+// @version      1.1.1
 // @description  Vinn på travet med Harry Boy! PS. Du måste synka med discord för att få notifikationer när saker händer, skriv !travet [travian namn] i #memes chatten
 // @author       Adam Andreasson
 // @match        https://tx3.travian.se/*
@@ -55,6 +55,32 @@ $.noConflict();
             }
 
             return str;
+        }
+
+        function TradeRouteFactory(opts, minHour, maxHour) {
+            var self = this;
+            this.opts = opts;
+            this.hour = minHour;
+            this.maxHour = maxHour;
+
+            this.start = function(){
+                jQuery(".hb-trade-route").prop("disabled", true);
+                tick();
+            }
+
+            function tick(){
+                if (self.hour > self.maxHour) {
+                    window.location.href = "/build.php?gid=17&t=0";
+                    return;
+                }
+
+                jQuery(".hb-trade-route").html("Skapar handelsvägar... " + self.hour);
+                self.opts.userHour = self.hour++;
+
+                jQuery.post("/build.php", self.opts);
+
+                setTimeout(tick, hb.getRandomDelay(3000, 800));
+            }
         }
 
         this.goToFields = function(){
@@ -182,6 +208,37 @@ $.noConflict();
             });
             return resources;
 
+        };
+
+        this.addTradeRouteMenu = function(){
+            var dom = '<div style="border:1px solid #ccc; padding:5px">';
+            dom += '🦊 Skapa handelsväg för varje timma mellan ';
+            dom += '<select id="minHour"></select> och ';
+            dom += '<select id="maxHour"></select> <button style="border:1px solid #ccc; padding:2px; margin-right:10px;" class="hb-trade-route">Skapa</button>';
+            dom += '</div>';
+
+            jQuery("#tradeRouteEdit").append(dom);
+            jQuery("#userHour option").clone().appendTo("#minHour");
+            jQuery("#userHour option").clone().appendTo("#maxHour");
+
+            jQuery("body").on("click", ".hb-trade-route", function(event){
+                event.preventDefault();
+
+                var minHour = parseInt(jQuery("#minHour").val());
+                var maxHour = parseInt(jQuery("#maxHour").val());
+
+                if (minHour > maxHour)
+                    return alert('Hallå nu har du valt konstiga timmar');
+
+                var opts = {};
+                ['did_dest', 'r1', 'r2', 'r3', 'r4', 'repeat', 'gid', 'a', 't', 'trid', 'option']
+                        .forEach(name => opts[name] = jQuery("[name='"+name+"']").val());
+                
+                if (opts.r1 == '0' && opts.r2 == '0' && opts.r3 == '0' && opts.r4 == '0')
+                    return alert('Hallå du måste välja några råvaror också');
+
+                new TradeRouteFactory(opts, minHour, maxHour).start();
+            });
         };
 
         this.addCountdownAlarmButtons = function(){
@@ -659,6 +716,10 @@ $.noConflict();
         this.getRandomTimeBeforeTime = function(target, deviation, time){
             return Math.round(time - Math.abs(target + randomGauss()*deviation));
         };
+
+        this.getRandomDelay = function(delay, deviation){
+            return Math.round(Math.abs(delay + randomGauss()*deviation));
+        }
 
         this.getAlertLog = function(){
             return this.persistentData.alerts;
@@ -1305,6 +1366,7 @@ $.noConflict();
             this.domAdapter.addVillageSelector(this.persistentData.villages);
             this.domAdapter.formatStats();
             this.domAdapter.addFoxSettings();
+            this.domAdapter.addTradeRouteMenu();
         };
 
     }
