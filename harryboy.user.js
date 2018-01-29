@@ -353,25 +353,29 @@ $.noConflict();
 
             for(var i = 0; i < hb.persistentData.actionQueue.length; i++){
                 var action = hb.persistentData.actionQueue[i];
-                var content = '' + action.type + ' / '+action.village+ '<br />';
+                var villageName = '??';
+                if(action.village != null)
+                    villageName = hb.getVillageById(action.village).name || '???';
+                var content = '' + action.type + ' / '+villageName+ '<br />';
                 var customLook = 'border:1px solid #444;background:#333;';
                 if(action.type == "SEND_TROOPS"){
                     customLook = 'border:1px solid #0D3B4A;background:#092C38;';
-                    content = 'Trupper skickas från '+action.village+'<br>Mål: '+action.targetName+'<br />landar kl ' + new Date(action.strikeTime*1000).toString() + '';
+                    content = 'Trupper skickas från '+villageName+'<br>Mål: '+action.targetName+'<br />landar kl ' + new Date(action.strikeTime*1000).toString() + '';
                 }
                 dom += '<div style="'+customLook+'margin:2px 0;padding:5px;"><button class="hb-action-remove" hbAction="'+i+'" style="color:#e00; padding:2px; margin-right:10px;">x</button><span style="color:#ddd;">kl ' + new Date(action.time).toString() + '</span><br>';
 
-                    dom += content;
+                dom += content;
 
                 dom += '</div>';
             }
 
             for(var i = 0; i < hb.persistentData.activities.length; i++){
                 var activity = hb.persistentData.activities[i];
+                var villageName = hb.getVillageById(activity.village).name || '???';
                 if(activity.type == "ATTACK" || activity.type == "RAID")
-                    dom += '<div style="border:1px solid #cc0;padding:5px;">' + activity.type + ' i '+activity.village+'<br />från ' + activity.from + '<br />kl ' + new Date(activity.time*1000).toString() + '</div>';
+                    dom += '<div style="border:1px solid #cc0;padding:5px;">' + activity.type + ' i '+villageName+'<br />från ' + activity.from + '<br />kl ' + new Date(activity.time*1000).toString() + '</div>';
                 else
-                    dom += '<div style="border:1px solid #0c0;padding:5px;">' + activity.type + ' i '+activity.village+ '<br />kl ' + new Date(activity.time*1000).toString() + '</div>';
+                    dom += '<div style="border:1px solid #0c0;padding:5px;">' + activity.type + ' i '+villageName+ '<br />kl ' + new Date(activity.time*1000).toString() + '</div>';
             }
 
             dom += '<div class="hb-options" style="background:#1a1a1a;padding:5px;">Rävsitter i mode '+hb.persistentData.sitter.mode+'<br>';
@@ -824,7 +828,7 @@ $.noConflict();
         this.getAttackByVillage = function(village){
             for(var a in this.persistentData.activities){
                var activity = this.persistentData.activities[a];
-                if(activity.village == village.name && (activity.type == "ATTACK" || activity.type == "RAID")){
+                if(activity.village == village.id && (activity.type == "ATTACK" || activity.type == "RAID")){
                     return activity;
                 }
             }
@@ -852,7 +856,7 @@ $.noConflict();
             console.log("we need to look into this attack on ", village.name);
             this.queueAction({
                 "type": "ATTACK_CHECK",
-                "village" : village.name,
+                "village" : village.id,
                 "time": this.getRandomTime(10*1000, 2*1000)
             });
         };
@@ -896,10 +900,11 @@ $.noConflict();
 
             var attackDetails = this.domAdapter.getAttackDetails();
 
+            console.log(attackDetails);
+
             if(attackDetails !== null){
 
                 console.log("WHERE IS MY SPAGHET");
-                console.log(attackDetails);
 
                 for(var ad = 0; ad < attackDetails.length; ad++){
                     var attack = attackDetails[ad];
@@ -931,7 +936,7 @@ $.noConflict();
 
             }
 
-            this.setNextActionTimer();
+            hb.domAdapter.goToUrl(window.location.href);
         };
 
         this.getNextAction = function(){
@@ -969,7 +974,7 @@ $.noConflict();
 
             if(numTroops > 1){
                 console.log("building", numTroops);
-                this.plebbeAlerter.sendAlert(this.user, "Bygger " + numTroops + " " + triggerAction.troopData.name + " i " + triggerAction.troopData.village, Date.now()/1000);
+                this.plebbeAlerter.sendAlert(this.user, "Bygger " + numTroops + " " + triggerAction.troopData.name + " i " + this.getVillageById(triggerAction.troopData.village).name, Date.now()/1000);
                 setTimeout(this.domAdapter.buildTroopsCommit, 2000);
             }else{
                 console.log("aw man cant build anytihng....");
@@ -986,7 +991,7 @@ $.noConflict();
 
             switch(action.type){
                 case "CHANGE_VILLAGE":
-                    hb.domAdapter.changeVillage(action.village);
+                    hb.domAdapter.changeVillage(hb.getVillageById(action.village).name);
                     break;
 
                 case "VILLAGE_FIELDS":
@@ -1030,7 +1035,7 @@ $.noConflict();
                 return;
             }
 
-            if(nextAction.village != this.activeVillage.name && nextAction.type != "CHANGE_VILLAGE" && nextAction.village !== null){
+            if(nextAction.village != this.activeVillage.id && nextAction.type != "CHANGE_VILLAGE" && nextAction.village !== null){
 
                 nextAction = {
                 "type": "CHANGE_VILLAGE",
@@ -1129,7 +1134,7 @@ $.noConflict();
                     var randomVillage = this.persistentData.villages[rand];
                     var nextAction = {
                         "type": "CHANGE_VILLAGE",
-                        "village" : randomVillage.name,
+                        "village" : randomVillage.id,
                         "time": this.getRandomTime(this.persistentData.options.pacetime*60*1000, this.persistentData.options.pacetime*6*1000)
                     };
                     this.queueAction(nextAction);
@@ -1182,11 +1187,11 @@ $.noConflict();
 
         };
 
-        this.toggleSitterTroops = function(troopType, troopName, village){
+        this.toggleSitterTroops = function(troopType, troopName, villageId){
             console.log("toggle troop type ", troopType);
 
             for(var i = this.persistentData.sitter.buildTroops.length-1; i >= 0; i--){
-                if(this.persistentData.sitter.buildTroops[i].type == troopType && this.persistentData.sitter.buildTroops[i].village == village){
+                if(this.persistentData.sitter.buildTroops[i].type == troopType && this.persistentData.sitter.buildTroops[i].village == villageId){
                     this.persistentData.sitter.buildTroops.splice(i,1);
                     this.saveData();
                     this.domAdapter.redrawInfoWindow();
@@ -1198,7 +1203,7 @@ $.noConflict();
             this.persistentData.sitter.buildTroops.push({
                 "type": troopType,
                 "name": troopName,
-                "village": village,
+                "village": villageId,
                 "url": window.location.href,
                 "lastbuild": 0
             });
@@ -1226,13 +1231,11 @@ $.noConflict();
 
             console.log("gotta scheudule", time, attackData);
 
-            //this.persistentData.activities.push({"type": "SEND_TROOPS", "village": this.activeVillage.name, "time": time, "strikeTime": strikeTime, "targetName": targetName, "attackData": attackData, "url": window.location.href});
-
             console.log("time to prepare troops boi!!");
 
             var nextAction = {
                 "type": "SEND_TROOPS",
-                "village" : this.activeVillage.name,
+                "village" : this.activeVillage.id,
                 "strikeTime": strikeTime,
                 "targetName": targetName,
                 "attackData": attackData,
