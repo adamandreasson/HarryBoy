@@ -847,7 +847,7 @@ $.noConflict();
             this.saveData();
             console.log("alerting of incoming attack");
 
-            this.plebbeAlerter.sendAlert(this.user, data.type + " kommer i " + data.village + " från " + data.from + " kl " + new Date(data.time*1000).toString(), Date.now()/1000);
+            this.plebbeAlerter.sendAlert(this.user, data.type + " kommer i " + (this.getVillageById(data.village).name || "???") + " från " + data.from + " kl " + new Date(data.time*1000).toString(), Date.now()/1000);
 
             return true;
         };
