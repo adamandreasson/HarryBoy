@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Harry Boy
 // @namespace    https://adamandreasson.se/
-// @version      1.1.2
+// @version      1.1.3
 // @description  Vinn på travet med Harry Boy! PS. Du måste synka med discord för att få notifikationer när saker händer, skriv !travet [travian namn] i #memes chatten
 // @author       Adam Andreasson
 // @match        https://tx3.travian.se/*
@@ -233,7 +233,7 @@ $.noConflict();
                 var opts = {};
                 ['did_dest', 'r1', 'r2', 'r3', 'r4', 'repeat', 'gid', 'a', 't', 'trid', 'option']
                         .forEach(name => opts[name] = jQuery("[name='"+name+"']").val());
-                
+
                 if (opts.r1 == '0' && opts.r2 == '0' && opts.r3 == '0' && opts.r4 == '0')
                     return alert('Hallå du måste välja några råvaror också');
 
@@ -501,25 +501,31 @@ $.noConflict();
         };
 
         this.addVillageSelector = function(villages){
-            if (jQuery(".coordinatesInput").length > 0 && jQuery(".merchantsAvailable").length > 0) {
-                var dom = '<div class="clear"></div><select class="hb-village-sel" style="margin-top: 5px"><option>Välj en av dina byar</option>';
+            if (jQuery(".destination .coordinatesInput").length > 0) {
+                var dom = '<div class="clear"></div><div class="hb-village-sel" style="margin-top: 5px">';
                 for (var i = 0; i < villages.length; i++) {
-                    dom += '<option x="' + villages[i].coords.x + '" y="' + villages[i].coords.y + '">' + villages[i].name + '</option>';
+                    dom += '<button x="' + villages[i].coords.x + '" y="' + villages[i].coords.y + '" name="' + villages[i].name + '" style="display:block;background:#fff;width:50%;padding:3px;margin-top:1px;line-height:1;">' + villages[i].name + '</button>';
                 }
-                dom += '</select>';
+                dom += '</div>';
 
                 jQuery(dom).insertAfter(".coordinatesInput");
 
                 const domAdapter = this;
-                jQuery("body").on("change", ".hb-village-sel", function(event){
-                    var village = jQuery(this).find(":selected");
+                jQuery("body").on("click", ".hb-village-sel button", function(event){
+                    event.preventDefault();
+
+                    var village = jQuery(this);
                     var x = village.attr("x");
                     var y = village.attr("y");
+                    var name = village.attr("name");
 
-                    if (x || y) {
-                        domAdapter.simulateInput(document.getElementById("xCoordInput"), x);
-                        domAdapter.simulateInput(document.getElementById("yCoordInput"), y);
+                    if (x || y || name) {
+                        //domAdapter.simulateInput(document.getElementById("xCoordInput"), x);
+                        //domAdapter.simulateInput(document.getElementById("yCoordInput"), y);
+                        domAdapter.simulateInput(document.getElementById("enterVillageName"), name);
                     }
+
+                    return false;
                 });
             }
         };
@@ -532,7 +538,7 @@ $.noConflict();
                 });
             }
         };
-        
+
         this.simulateInput = function(element, text){
             element.dispatchEvent(new KeyboardEvent("keydown"));
             element.dispatchEvent(new KeyboardEvent("keypress"));
@@ -1032,6 +1038,10 @@ $.noConflict();
 
             if(this.activeVillage == null){
                 this.setStatus("<b>INTE INLOGGAD??? Spara inlogg i Chrome för att harry boy ska logga in igen automatiskt!!</b>");
+                // refresh page... might have timed out or server error or something
+                setTimeout(function(){
+                    location.reload();
+                },15*1000*60);
                 return;
             }
 
