@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Harry Boy
 // @namespace    https://adamandreasson.se/
-// @version      1.1.3
+// @version      1.1.4
 // @description  Vinn på travet med Harry Boy! PS. Du måste synka med discord för att få notifikationer när saker händer, skriv !travet [travian namn] i #memes chatten
 // @author       Adam Andreasson
 // @match        https://tx3.travian.se/*
@@ -316,11 +316,14 @@ $.noConflict();
 
         this.addInfoWindow = function(){
             var dom = '<div class="hb-info" style="position:fixed; bottom:0; right:0; background: #222; color: #fff; padding:10px; z-index:100; width:300px;">';
+            dom += '🦊 Harry Boy';
+            dom += '<div class="hb-status" style="color:#ddd;font-size:0.9em;">'+hb.status+'</div>';
+            dom += '<div class="hb-wactions"></div>';
+            dom += '<div class="hb-wactivities"></div>';
+            dom += '<div class="hb-wsitter"></div>';
             dom += '</div>';
 
             jQuery("body").append(dom);
-
-            this.redrawInfoWindow();
 
             jQuery("body").on("click", ".hb-activate-sitter", function(event){
                 var mode = jQuery(this).attr("sitterMode");
@@ -344,12 +347,23 @@ $.noConflict();
                 event.preventDefault();
                 return false;
             });
+
+            this.redrawStatus();
+            this.redrawActions();
+            this.redrawActivities();
+            this.redrawSitterStatus();
         };
 
-        this.redrawInfoWindow = function(){
+        this.redrawStatus = function(){
 
-            var dom = '🦊 Harry Boy';
-            dom += '<div class="hb-status" style="color:#ddd;font-size:0.9em;">'+hb.status+'</div>';
+            var dom = hb.status;
+
+            jQuery(".hb-status").html(dom);
+        };
+
+        this.redrawActions = function(){
+
+            var dom = '';
 
             for(var i = 0; i < hb.persistentData.actionQueue.length; i++){
                 var action = hb.persistentData.actionQueue[i];
@@ -369,6 +383,13 @@ $.noConflict();
                 dom += '</div>';
             }
 
+            jQuery(".hb-wactions").html(dom);
+        };
+
+        this.redrawActivities = function(){
+
+            var dom = '<div style="max-height:300px;overflow-y:auto;">';
+
             for(var i = 0; i < hb.persistentData.activities.length; i++){
                 var activity = hb.persistentData.activities[i];
                 var villageName = hb.getVillageById(activity.village).name || '???';
@@ -378,7 +399,14 @@ $.noConflict();
                     dom += '<div style="border:1px solid #0c0;padding:5px;">' + activity.type + ' i '+villageName+ '<br />kl ' + new Date(activity.time*1000).toString() + '</div>';
             }
 
-            dom += '<div class="hb-options" style="background:#1a1a1a;padding:5px;">Rävsitter i mode '+hb.persistentData.sitter.mode+'<br>';
+            dom += '</div>';
+
+            jQuery(".hb-wactivities").html(dom);
+
+        };
+
+        this.redrawSitterStatus = function(){
+            var dom = '<div class="hb-options" style="background:#1a1a1a;padding:5px;">Rävsitter i mode '+hb.persistentData.sitter.mode+'<br>';
 
             if(hb.persistentData.sitter.mode == "ACTIVE"){
                 dom += '<div class="hb-building">';
@@ -414,7 +442,9 @@ $.noConflict();
             }
 
             dom += '</div>';
-            jQuery(".hb-info").html(dom);
+
+            jQuery(".hb-wsitter").html(dom);
+
         };
 
 
@@ -614,8 +644,6 @@ $.noConflict();
 
             jQuery("#footer").append(dom);
 
-            this.redrawInfoWindow();
-
             jQuery("body").on("blur", ".hb-setting", function(event){
                 var setting = jQuery(this).attr("setting");
                 var val = jQuery(this).val();
@@ -749,7 +777,7 @@ $.noConflict();
 
         this.setStatus = function(status){
             this.status = status;
-            this.domAdapter.redrawInfoWindow();
+            this.domAdapter.redrawStatus();
         };
 
         this.saveData = function(){
@@ -855,6 +883,7 @@ $.noConflict();
 
             this.plebbeAlerter.sendAlert(this.user, data.type + " kommer i " + (this.getVillageById(data.village).name || "???") + " från " + data.from + " kl " + new Date(data.time*1000).toString(), Date.now()/1000);
 
+            this.domAdapter.redrawActivities();
             return true;
         };
 
@@ -875,6 +904,7 @@ $.noConflict();
                     console.log("removing old activity", activity);
                 }
             }
+            this.domAdapter.redrawActivities();
         };
 
         this.clearAttacks = function(village){
@@ -884,6 +914,8 @@ $.noConflict();
                     this.persistentData.activities.splice(a, 1);
                 }
             }
+
+            this.domAdapter.redrawActivities();
         };
 
         this.controlForAttacks = function(){
@@ -936,7 +968,9 @@ $.noConflict();
                 for(var m in movements){
                     var movement = movements[m];
                     if(movement.type == "ATTACK" || movement.type == "ATTACK_SELF" || movement.type == "ATTACK_OUT"){
+                        console.log(movement.url);
                         this.domAdapter.goToUrl(movement.url);
+                        return;
                     }
                 }
 
@@ -1024,6 +1058,8 @@ $.noConflict();
                     hb.domAdapter.goToUrl(window.location.href);
                     break;
             }
+
+            hb.domAdapter.redrawActions();
         };
 
         this.setNextActionTimer = function(){
@@ -1078,6 +1114,8 @@ $.noConflict();
 
             var ds = this.domAdapter;
             this.nextUpdate = setTimeout(this.executeAction, timeoutMillis);
+
+            this.domAdapter.redrawActions();
 
         };
 
@@ -1163,6 +1201,7 @@ $.noConflict();
 
             }
 
+            this.domAdapter.redrawActions();
 /*
             if(this.nextUpdate === null){
                 this.setNextActionTimer();
@@ -1192,7 +1231,8 @@ $.noConflict();
             }
 
             this.setNextActionTimer();
-            this.domAdapter.redrawInfoWindow();
+            this.domAdapter.redrawSitterStatus();
+            this.domAdapter.redrawActions();
             this.saveData();
 
         };
@@ -1204,7 +1244,7 @@ $.noConflict();
                 if(this.persistentData.sitter.buildTroops[i].type == troopType && this.persistentData.sitter.buildTroops[i].village == villageId){
                     this.persistentData.sitter.buildTroops.splice(i,1);
                     this.saveData();
-                    this.domAdapter.redrawInfoWindow();
+                    this.domAdapter.redrawSitterStatus();
                     console.log("removed troop type", troopType, "from sitter queu");
                     return;
                 }
@@ -1218,7 +1258,7 @@ $.noConflict();
                 "lastbuild": 0
             });
             this.saveData();
-            this.domAdapter.redrawInfoWindow();
+            this.domAdapter.redrawSitterStatus();
 
         };
 
@@ -1257,7 +1297,7 @@ $.noConflict();
             this.queueAction(nextAction);
 
             this.saveData();
-            this.domAdapter.redrawInfoWindow();
+            this.domAdapter.redrawActions();
 
         };
 
@@ -1265,7 +1305,7 @@ $.noConflict();
             console.log("remove activity index ", index);
             this.persistentData.actionQueue.splice(index, 1);
             this.saveData();
-            this.domAdapter.redrawInfoWindow();
+            this.domAdapter.redrawActions();
 
             if(index == 0){
                 clearInterval(this.counterInterval);
