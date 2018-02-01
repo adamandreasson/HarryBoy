@@ -1,10 +1,10 @@
 // ==UserScript==
 // @name         Harry Boy
 // @namespace    https://adamandreasson.se/
-// @version      1.1.6
+// @version      1.2
 // @description  Vinn på travet med Harry Boy! PS. Du måste synka med discord för att få notifikationer när saker händer, skriv !travet [travian namn] i #memes chatten
 // @author       Adam Andreasson
-// @match        https://tx3.travian.se/*
+// @match        https://*.travian.se/*
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @require      http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js
@@ -83,6 +83,15 @@ $.noConflict();
             }
         }
 
+        this.getServer = function(){
+            var urlSplit = window.location.href.split(".");
+            var relevantServerInfo = urlSplit[0];
+            return relevantServerInfo.substr(relevantServerInfo.indexOf("//")+2);
+        };
+
+        this.isOnFields = function(){
+            return window.location.href.includes("dorf1.php");
+        };
         this.goToFields = function(){
             window.location.href = "/dorf1.php";
         };
@@ -207,6 +216,75 @@ $.noConflict();
                 resources.push(toNumbersOnly(jQuery(this).find(".num").text()));
             });
             return resources;
+
+        };
+
+        this.getFieldInfo = function(){
+
+            if(jQuery(".village1 #rx").length < 1)
+                return null;
+
+            var fields = [];
+
+            jQuery(".village1 #rx area").each(function(){
+                var name = jQuery(this).attr("alt");
+                var url = jQuery(this).attr("href");
+                var id = parseInt(url.substr(url.indexOf("id=")+3));
+                var level = toNumbersOnly(name);
+                if(id > 0){
+                    var circleClasses = jQuery("#village_map .level:nth-child("+id+")").attr("class");
+                    var upgradePossible = false;
+                    if(circleClasses.indexOf("good") !== -1)
+                        upgradePossible = true;
+                    fields.push({
+                        "id": id,
+                        "level": level,
+                        "name": name,
+                        "upgradable": upgradePossible
+                    });
+                }
+            });
+
+            if(fields.length > 0){
+
+                var dom = '<div class="hb-village-options" style="text-align:right;"></dom>';
+
+                jQuery("#map_details").append(dom);
+                this.redrawVillageOptions();
+
+                jQuery("body").on("click", ".hb-toggle-autofield", function(event){
+                    hb.toggleAutoField();
+                    hb.domAdapter.redrawVillageOptions();
+
+                    event.preventDefault();
+                    return false;
+                });
+
+            }
+
+            return fields;
+
+        };
+
+        this.redrawVillageOptions = function(){
+            var style = "background:#333;border:#000;padding:5px;color:#ccc";
+            if(hb.activeVillage.autoField)
+                style = "background:#99c01a;border:#000;padding:5px;color:#000";
+
+            var dom = '<button class="hb-toggle-autofield" style="'+style+'" title="Uppgraderar samtliga fält i denna byn när aktiv rävsitter e på. Försöker alltid börja med fältet som e i lägst nivå.">🦊 Automatisk uppgradering</button>';
+
+
+            jQuery('.hb-village-options').html(dom);
+
+        };
+
+        this.attemptUpgrade = function(field, villageName){
+
+            if(jQuery(".upgradeButtonsContainer .section1 .green.build").length < 1)
+                return;
+
+            jQuery(".upgradeButtonsContainer .section1 .green.build").trigger('click');
+            hb.plebbeAlerter.sendAlert(hb.user, "Uppgraderar " + field.name + " till nivå " + (field.level+1) + " i " + villageName, 0);
 
         };
 
@@ -647,6 +725,11 @@ $.noConflict();
             dom += 'vänta mellan trupp bygge(aktiv räv) <input type="number" class="hb-setting" style="width:40px;" size="5" setting="trooptime" value="'+hb.persistentData.options.trooptime+'"> min<br>';
             dom += 'auto login namn <input type="text" class="hb-setting" style="width:90px;" setting="savedUsername" value="'+hb.persistentData.options.savedUsername+'"><br>';
             dom += 'auto login pass <input type="password" class="hb-setting" style="width:90px;" setting="savedPassword" value="'+hb.persistentData.options.savedPassword+'"><br>';
+            var checkd = '';
+            if(hb.persistentData.options.resourceWarning)
+                checkd = 'checked';
+            dom += 'varning vid fullt magasin <input type="checkbox" class="hb-setting" value="checkbox" setting="resourceWarning" '+checkd+'><br>';
+            dom += GM_info.script.name + ' v' + GM_info.script.version + ' - uppdaterades ' + new Date(GM_info.script.lastModified).toLocaleString('sv-SE');
             dom += '</div>';
 
             jQuery("#footer").append(dom);
@@ -654,6 +737,8 @@ $.noConflict();
             jQuery("body").on("blur", ".hb-setting", function(event){
                 var setting = jQuery(this).attr("setting");
                 var val = jQuery(this).val();
+                if(val == "checkbox")
+                    val = jQuery(this).is(':checked');
                 hb.updateOption(setting, val);
                 console.log(setting, val);
                 event.preventDefault();
@@ -788,7 +873,11 @@ $.noConflict();
         };
 
         this.saveData = function(){
-            GM_setValue('harryBoyP', this.persistentData);
+            //GM_setValue('harryBoyP', this.persistentData);
+
+            var persistentServerData = GM_getValue('harryBoyMP', null);
+            persistentServerData.servers[this.domAdapter.getServer()] = this.persistentData;
+            GM_setValue('harryBoyMP', persistentServerData);
         };
 
         this.getVillageByName = function(name){
@@ -855,6 +944,45 @@ $.noConflict();
             var activeVillageId = this.domAdapter.getActiveVillageId();
             if(activeVillageId != null)
                 this.activeVillage = this.getVillageById(activeVillageId);
+
+            var fieldInfo = this.domAdapter.getFieldInfo();
+
+            if(fieldInfo != null && this.persistentData.sitter.mode == "ACTIVE"){
+
+                //sort fields by level isntead of id, this way we will upgrade lowest levels first nice
+
+                fieldInfo.sort(function(a,b) {return (a.level > b.level) ? 1 : ((b.level > a.level) ? -1 : 0);});
+                console.log(fieldInfo);
+
+                for(var i = 0; i < fieldInfo.length; i++){
+
+                    if(fieldInfo[i].upgradable && hb.activeVillage.autoField){
+                        console.log("this field may be upgraded");
+
+                        var nextAction = {
+                            "type": "UPGRADE_FIELD",
+                            "village" : this.activeVillage.id,
+                            "field" : fieldInfo[i],
+                            "time": this.getRandomTime(20*1000, 8*1000)
+                        };
+                        this.queueAction(nextAction);
+                        break;
+                    }
+                }
+            }
+
+        };
+
+        this.toggleAutoField = function(){
+            for(var i = 0; i < this.persistentData.villages.length; i++){
+                if(this.persistentData.villages[i].id == this.activeVillage.id){
+                    if(this.persistentData.villages[i].autoField)
+                        this.persistentData.villages[i].autoField = false;
+                    else
+                        this.persistentData.villages[i].autoField = true;
+                }
+            }
+            this.saveData();
         };
 
         this.updateProductionNumbers = function(){
@@ -994,6 +1122,25 @@ $.noConflict();
             
         };
 
+        this.upgradeField = function(triggerAction){
+            console.log("time for upgrade on this", triggerAction);
+
+            if(!window.location.href.includes("id="+triggerAction.field.id)){
+                triggerAction.time += 2000;
+                this.queueAction(triggerAction);
+                this.domAdapter.goToUrl("build.php?id="+triggerAction.field.id);
+                return;
+            }
+
+            this.domAdapter.attemptUpgrade(triggerAction.field, this.getVillageById(triggerAction.village).name);
+
+            //if something goes wrong we can just leave
+            setTimeout(function(){
+                hb.domAdapter.goToFields();
+            },1000);
+
+        };
+
         this.getNextAction = function(){
             if(this.persistentData.actionQueue.length < 1)
                 return null;
@@ -1063,6 +1210,10 @@ $.noConflict();
 
                 case "SEND_TROOPS":
                     hb.domAdapter.sendTroops(action);
+                    break;
+
+                case "UPGRADE_FIELD":
+                    hb.upgradeField(action);
                     break;
 
                 case "CUSTOM_URL":
@@ -1193,14 +1344,24 @@ $.noConflict();
                 }
 
                 if(!hasScheduledAction){
-                    var rand = Math.floor(Math.random() * Math.floor(this.persistentData.villages.length-1));
-                    var randomVillage = this.persistentData.villages[rand];
-                    var nextAction = {
-                        "type": "CHANGE_VILLAGE",
-                        "village" : randomVillage.id,
-                        "time": this.getRandomTime(this.persistentData.options.pacetime*60*1000, this.persistentData.options.pacetime*6*1000)
-                    };
-                    this.queueAction(nextAction);
+                    if(this.domAdapter.isOnFields()){
+                        var rand = Math.floor(Math.random() * Math.floor(this.persistentData.villages.length-1));
+                        var randomVillage = this.persistentData.villages[rand];
+                        var nextAction = {
+                            "type": "CHANGE_VILLAGE",
+                            "village" : randomVillage.id,
+                            "time": this.getRandomTime(this.persistentData.options.pacetime*60*1000, this.persistentData.options.pacetime*6*1000)
+                        };
+                        this.queueAction(nextAction);
+                    }else{
+                        var nextAction = {
+                            "type": "CUSTOM_URL",
+                            "url": "/dorf1.php",
+                            "village" : this.activeVillage.id,
+                            "time": this.getRandomTime(this.persistentData.options.pacetime*6*1000, this.persistentData.options.pacetime*2*1000)
+                        };
+                        this.queueAction(nextAction);
+                    }
                 }
 
             }else if(this.persistentData.sitter.mode == "PASSIVE"){
@@ -1208,7 +1369,7 @@ $.noConflict();
                 if(!hasScheduledAction){
                     var nextAction = {
                         "type": "REFRESH",
-                        "village" : null,
+                        "village" : this.activeVillage.id,
                         "time": this.getRandomTime(this.persistentData.options.pacetime*60*1000, this.persistentData.options.pacetime*6*1000)
                     };
                     this.queueAction(nextAction);
@@ -1279,6 +1440,9 @@ $.noConflict();
         };
 
         this.checkStocks = function(){
+            if(!hb.persistentData.options.resourceWarning)
+                return;
+
             var fullStocks = this.domAdapter.getFullStocks();
 
             if(fullStocks.length === 0)
@@ -1394,8 +1558,17 @@ $.noConflict();
                 }
             });
 */
+            /*
+GM_setValue('harryBoyMP', {
+                "servers": {}
+            });
+            */
+            var persistentServerData = GM_getValue('harryBoyMP', {
+                "servers": {}
+            });
+            console.log("loaded all data", persistentServerData);
 
-            this.persistentData = GM_getValue('harryBoyP', {
+            var newServerData = {
                 "villages": [],
                 "activities" : [],
                 "actionQueue": [],
@@ -1411,10 +1584,25 @@ $.noConflict();
                     "savedPassword": null
                 },
                 "version": 4
-            });
+            };
+
+            var server = this.domAdapter.getServer();
+
+            if(persistentServerData.servers[server] == null){
+                console.log("unable to load server specific data");
+                if(GM_getValue('harryBoyP', null) != null){
+                    persistentServerData.servers[server] = GM_getValue('harryBoyP', null);
+                }else{
+                    persistentServerData.servers[server] = newServerData;
+                }
+            }
+
+            GM_setValue('harryBoyMP', persistentServerData);
+            this.persistentData = persistentServerData.servers[server];
+
             this.upgrade();
             this.user = this.domAdapter.getUser();
-            console.log("loaded data", this.persistentData);
+            console.log("loaded server data", this.persistentData);
 
             this.persistentData.activities.sort(function(a,b) {return (a.time > b.time) ? 1 : ((b.time > a.time) ? -1 : 0);} );
 
@@ -1436,6 +1624,7 @@ $.noConflict();
             this.domAdapter.formatStats();
             this.domAdapter.addFoxSettings();
             this.domAdapter.addTradeRouteMenu();
+
         };
 
     }
