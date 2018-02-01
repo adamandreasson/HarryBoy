@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Harry Boy
 // @namespace    https://adamandreasson.se/
-// @version      1.1.4
+// @version      1.1.5
 // @description  Vinn på travet med Harry Boy! PS. Du måste synka med discord för att få notifikationer när saker händer, skriv !travet [travian namn] i #memes chatten
 // @author       Adam Andreasson
 // @match        https://tx3.travian.se/*
@@ -336,7 +336,8 @@ $.noConflict();
                 var troops = jQuery(this).attr("hbTroop");
                 var troopName = jQuery(this).attr("hbTroopName");
                 var village = jQuery(this).attr("hbVillage");
-                hb.toggleSitterTroops(troops, troopName, village);
+                var buildingId = jQuery(this).attr("hbBuildingId");
+                hb.toggleSitterTroops(troops, troopName, village, buildingId);
                 event.preventDefault();
                 return false;
             });
@@ -417,6 +418,8 @@ $.noConflict();
             for(var i = 0; i < hb.persistentData.sitter.buildTroops.length; i++){
                 var troopData = hb.persistentData.sitter.buildTroops[i];
                 var villageName = hb.getVillageById(troopData.village).name || '???';
+                var buildingId = troopData.buildingId || "null";
+
                 var est = "";
                 if('estimate' in troopData && troopData.estimate !== null){
                     var estMinutes = (troopData.estimate - Date.now())/60/1000;
@@ -424,7 +427,8 @@ $.noConflict();
                         estMinutes = 0;
                     est = '(om ca '+estMinutes.toFixed(1) + " min)";
                 }
-                dom += (i+1) + '. Kommer bygga '+troopData.name+' i ' + villageName + ' <button class="hb-sitter-queue" hbTroop="'+troopData.type+'" hbTroopName="'+troopData.name+'" hbVillage="'+troopData.village+'" style="color:#e00; padding:2px; margin-right:10px;">x</button> '+est+'<br>';
+
+                dom += (i+1) + '. Kommer bygga '+troopData.name+' i ' + villageName + ' <button class="hb-sitter-queue" hbTroop="'+troopData.type+'" hbTroopName="'+troopData.name+'" hbVillage="'+troopData.village+'" hbBuildingId="'+buildingId+'" style="color:#e00; padding:2px; margin-right:10px;">x</button> '+est+'<br>';
             }
 
             dom += '</div>';
@@ -456,9 +460,12 @@ $.noConflict();
                     var troopFullName =  jQuery(this).find('.bigUnitSection img.unitSection').attr("alt");
 
                     var troopName =  jQuery(this).find('.details input[type=text]').attr("name");
+                    var url = new URL(window.location.href);
+                    var buildingId = url.searchParams.get("id");
+                    console.log(buildingId);
 
                     var foxButton = '<button class="hb-sitter-queue" hbActive="nope" hbTroop="'+troopName+'" hbTroopName="'+troopFullName
-                            +'" hbVillage="'+hb.activeVillage.id+'" style="border:1px solid #ccc; padding:2px; margin-right:10px;">🦊 Köa hos rävsitter</button>';
+                            +'" hbVillage="'+hb.activeVillage.id+'" hbBuildingId="'+buildingId+'" style="border:1px solid #ccc; padding:2px; margin-right:10px;">🦊 Köa hos rävsitter</button>';
 
                     jQuery(this).find('.details').append(foxButton);
                 });
@@ -1237,11 +1244,11 @@ $.noConflict();
 
         };
 
-        this.toggleSitterTroops = function(troopType, troopName, villageId){
+        this.toggleSitterTroops = function(troopType, troopName, villageId, buildingId){
             console.log("toggle troop type ", troopType);
 
             for(var i = this.persistentData.sitter.buildTroops.length-1; i >= 0; i--){
-                if(this.persistentData.sitter.buildTroops[i].type == troopType && this.persistentData.sitter.buildTroops[i].village == villageId){
+                if(this.persistentData.sitter.buildTroops[i].type == troopType && this.persistentData.sitter.buildTroops[i].village == villageId && (this.persistentData.sitter.buildTroops[i].buildingId == buildingId || buildingId == "null")){
                     this.persistentData.sitter.buildTroops.splice(i,1);
                     this.saveData();
                     this.domAdapter.redrawSitterStatus();
@@ -1255,6 +1262,7 @@ $.noConflict();
                 "name": troopName,
                 "village": villageId,
                 "url": window.location.href,
+                "buildingId": buildingId,
                 "lastbuild": 0
             });
             this.saveData();
