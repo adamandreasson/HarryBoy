@@ -1,10 +1,12 @@
 // ==UserScript==
 // @name         Harry Boy
 // @namespace    https://adamandreasson.se/
-// @version      1.2
+// @version      1.2.1
 // @description  Vinn på travet med Harry Boy! PS. Du måste synka med discord för att få notifikationer när saker händer, skriv !travet [travian namn] i #memes chatten
 // @author       Adam Andreasson
 // @match        https://*.travian.se/*
+// @match        https://*.travian.com/*
+// @match        https://*.travian.*/*
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @require      http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js
@@ -86,7 +88,11 @@ $.noConflict();
         this.getServer = function(){
             var urlSplit = window.location.href.split(".");
             var relevantServerInfo = urlSplit[0];
-            return relevantServerInfo.substr(relevantServerInfo.indexOf("//")+2);
+            var tld = urlSplit[2].split("/")[0];
+            var server = relevantServerInfo.substr(relevantServerInfo.indexOf("//")+2) + tld;
+            if(server == "tx3se")
+                server = "tx3";
+            return server;
         };
 
         this.isOnFields = function(){
@@ -1590,7 +1596,7 @@ GM_setValue('harryBoyMP', {
 
             if(persistentServerData.servers[server] == null){
                 console.log("unable to load server specific data");
-                if(GM_getValue('harryBoyP', null) != null){
+                if(GM_getValue('harryBoyP', null) != null && server == "tx3"){
                     persistentServerData.servers[server] = GM_getValue('harryBoyP', null);
                 }else{
                     persistentServerData.servers[server] = newServerData;
