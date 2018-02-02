@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Harry Boy
 // @namespace    https://adamandreasson.se/
-// @version      1.2.2
+// @version      1.2.3
 // @description  Vinn på travet med Harry Boy! PS. Du måste synka med discord för att få notifikationer när saker händer, skriv !travet [travian namn] i #memes chatten
 // @author       Adam Andreasson
 // @match        https://*.travian.se/*
@@ -239,25 +239,38 @@ $.noConflict();
                 var level = toNumbersOnly(name);
                 if(id > 0){
                     var circleClasses = jQuery("#village_map .level:nth-child("+id+")").attr("class");
+
+                    var type = 0;
+                    var typeSplit = circleClasses.split(" ");
+                    for(var i=0; i<typeSplit.length; i++){
+                        if(typeSplit[i].includes("gid")){
+                            type = toNumbersOnly(typeSplit[i]);
+                            break;
+                        }
+                    }
+
                     var upgradePossible = false;
                     if(circleClasses.indexOf("good") !== -1)
                         upgradePossible = true;
                     var underConstruction = false;
                     if(circleClasses.indexOf("underConstruction") !== -1)
                         underConstruction = true;
+
                     fields.push({
                         "id": id,
                         "level": level,
                         "name": name,
                         "upgradable": upgradePossible,
-                        "underConstruction": underConstruction
+                        "underConstruction": underConstruction,
+                        "type": type
                     });
                 }
             });
 
             if(fields.length > 0){
 
-                var dom = '<div class="hb-village-options" style="text-align:right;"></dom>';
+                var dom = '<div class="hb-village-options" style="text-align:right;"></div>';
+                dom += '<div class="hb-village-buildoptions"></div>';
 
                 jQuery("#map_details").append(dom);
                 this.redrawVillageOptions();
@@ -270,6 +283,14 @@ $.noConflict();
                     return false;
                 });
 
+                jQuery(".hb-village-buildoptions").on("keyup keypress blur change", ".hb-autofield-max", function(event){
+                    var fieldType = jQuery(this).attr("hbFieldType");
+                    var value = jQuery(this).val();
+                    hb.setMaxFieldLevel(fieldType, value);
+
+                    event.preventDefault();
+                    return false;
+                });
             }
 
             return fields;
@@ -278,13 +299,34 @@ $.noConflict();
 
         this.redrawVillageOptions = function(){
             var style = "background:#333;border:#000;padding:5px;color:#ccc";
-            if(hb.activeVillage.autoField)
+
+            if(hb.activeVillage.autoField){
                 style = "background:#99c01a;border:#000;padding:5px;color:#000";
 
-            var dom = '<button class="hb-toggle-autofield" style="'+style+'" title="Uppgraderar samtliga fält i denna byn när aktiv rävsitter e på. Försöker alltid börja med fältet som e i lägst nivå.">🦊 Automatisk uppgradering</button>';
+                var opt = '<table style="max-width:120px;float:right;color:#000;background:#99c01a;"><tr><td>trä</td><td>lera</td><td>järn</td><td>vete</td></tr><tr>';
 
+                var maxFieldOptions = {};
+                for(var i = 0; i < hb.persistentData.villages.length; i++){
+                    if(hb.persistentData.villages[i].id == hb.activeVillage.id && 'autoFieldMax' in hb.persistentData.villages[i]){
+                        maxFieldOptions = hb.persistentData.villages[i].autoFieldMax;
+                    }
+                }
+                for(var i=1; i<5; i++){
+                    var value = 20;
+                    if(maxFieldOptions[i] != null)
+                        value = maxFieldOptions[i];
+                    opt += '<td><input type="number" style="max-width:32px;" max=20 min=0 class="hb-autofield-max" hbFieldType='+i+' value="'+value+'"></td>';
+                }
+                opt += '</tr></table>';
 
-            jQuery('.hb-village-options').html(dom);
+                jQuery('.hb-village-buildoptions').html(opt);
+            }else{
+                jQuery('.hb-village-buildoptions').html('');
+            }
+
+            var btn = '<button class="hb-toggle-autofield" style="'+style+'" title="Uppgraderar samtliga fält i denna byn när aktiv rävsitter e på. Försöker alltid börja med fältet som e i lägst nivå.">🦊 Rävpopper</button>';
+
+            jQuery('.hb-village-options').html(btn);
 
         };
 
@@ -956,11 +998,20 @@ $.noConflict();
                 this.activeVillage = this.getVillageById(activeVillageId);
 
             var fieldInfo = this.domAdapter.getFieldInfo();
+            console.log(fieldInfo);
 
             if(fieldInfo != null && this.persistentData.sitter.mode == "ACTIVE"){
 
-                //sort fields by level isntead of id, this way we will upgrade lowest levels first nice
+                if('autoFieldMax' in this.activeVillage){
+                    for(var i = fieldInfo.length-1; i >= 0; i--){
+                        if(this.activeVillage.autoFieldMax[fieldInfo[i].type] == null)
+                            continue;
+                        if(fieldInfo[i].level >= this.activeVillage.autoFieldMax[fieldInfo[i].type])
+                            fieldInfo.splice(i,1);
+                    }
+                }
 
+                //sort fields by level isntead of id, this way we will upgrade lowest levels first nice
                 fieldInfo.sort(function(a,b) {return (a.level > b.level) ? 1 : ((b.level > a.level) ? -1 : 0);});
                 console.log(fieldInfo);
 
@@ -996,6 +1047,19 @@ $.noConflict();
                         this.persistentData.villages[i].autoField = false;
                     else
                         this.persistentData.villages[i].autoField = true;
+                }
+            }
+            this.saveData();
+        };
+
+        this.setMaxFieldLevel = function(fieldType, value){
+            console.log(fieldType, value);
+            for(var i = 0; i < this.persistentData.villages.length; i++){
+                if(this.persistentData.villages[i].id == this.activeVillage.id){
+                    if(!('autoFieldMax' in this.persistentData.villages[i]))
+                        this.persistentData.villages[i].autoFieldMax = [];
+                    this.persistentData.villages[i].autoFieldMax[fieldType] = value;
+                    console.log(this.persistentData.villages[i]);
                 }
             }
             this.saveData();
