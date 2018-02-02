@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Harry Boy
 // @namespace    https://adamandreasson.se/
-// @version      1.2.1
+// @version      1.2.2
 // @description  Vinn på travet med Harry Boy! PS. Du måste synka med discord för att få notifikationer när saker händer, skriv !travet [travian namn] i #memes chatten
 // @author       Adam Andreasson
 // @match        https://*.travian.se/*
@@ -242,11 +242,15 @@ $.noConflict();
                     var upgradePossible = false;
                     if(circleClasses.indexOf("good") !== -1)
                         upgradePossible = true;
+                    var underConstruction = false;
+                    if(circleClasses.indexOf("underConstruction") !== -1)
+                        underConstruction = true;
                     fields.push({
                         "id": id,
                         "level": level,
                         "name": name,
-                        "upgradable": upgradePossible
+                        "upgradable": upgradePossible,
+                        "underConstruction": underConstruction
                     });
                 }
             });
@@ -965,11 +969,17 @@ $.noConflict();
                     if(fieldInfo[i].upgradable && hb.activeVillage.autoField){
                         console.log("this field may be upgraded");
 
+                        //if under construction and the next field (sorted by levels) is the same level, thenb skip
+                        if(fieldInfo[i].underConstruction && fieldInfo[i].level == fieldInfo[i+1].level){
+                            console.log("skipping this one doe");
+                            continue;
+                        }
+
                         var nextAction = {
                             "type": "UPGRADE_FIELD",
                             "village" : this.activeVillage.id,
                             "field" : fieldInfo[i],
-                            "time": this.getRandomTime(20*1000, 8*1000)
+                            "time": this.getRandomTime(4*1000, 4*1000)
                         };
                         this.queueAction(nextAction);
                         break;
