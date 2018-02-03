@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Harry Boy
 // @namespace    https://adamandreasson.se/
-// @version      1.2.4
+// @version      1.2.5
 // @description  Vinn på travet med Harry Boy! PS. Du måste synka med discord för att få notifikationer när saker händer, skriv !travet [travian namn] i #memes chatten
 // @author       Adam Andreasson
 // @match        https://*.travian.se/*
@@ -405,6 +405,11 @@ $.noConflict();
 
                 }
 
+                if(jQuery(this).closest(".buildingWrapper").length > 0){
+                    timerName = jQuery.trim(jQuery(this).closest(".buildingWrapper").find("h2").text());
+                    timerName = "Kan bygga " + timerName + " i " + hb.activeVillage.name;
+                }
+
                 timerName = timerName.replace(/\t/g, "");
 
                 var timerValue = parseInt(jQuery(this).attr("value"));
@@ -704,6 +709,10 @@ $.noConflict();
                     jQuery(this).html(number.toLocaleString());
                 });
             }
+        };
+
+        this.showConstructionTimer = function(){
+            jQuery(".buildingWrapper .contractCosts .statusMessage span.hide").removeClass("hide").css("margin-left","10px");
         };
 
         this.simulateInput = function(element, text){
@@ -1022,7 +1031,12 @@ $.noConflict();
 
                         //if under construction and the next field (sorted by levels) is the same level, thenb skip
                         if(fieldInfo[i].underConstruction && fieldInfo[i].level == fieldInfo[i+1].level){
-                            console.log("skipping this one doe");
+                            console.log("skipping this one doe bcuz its being built and stuff");
+                            continue;
+                        }
+
+                        if(fieldInfo[i].level > fieldInfo[0].level){
+                            console.log("skip bcuz level is higher than lowest");
                             continue;
                         }
 
@@ -1704,6 +1718,7 @@ GM_setValue('harryBoyMP', {
             this.domAdapter.formatStats();
             this.domAdapter.addFoxSettings();
             this.domAdapter.addTradeRouteMenu();
+            this.domAdapter.showConstructionTimer();
 
         };
 
