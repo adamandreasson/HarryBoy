@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Harry Boy
 // @namespace    https://adamandreasson.se/
-// @version      1.2.5
+// @version      1.2.5.1
 // @description  Vinn på travet med Harry Boy! PS. Du måste synka med discord för att få notifikationer när saker händer, skriv !travet [travian namn] i #memes chatten
 // @author       Adam Andreasson
 // @match        https://*.travian.se/*
@@ -410,6 +410,11 @@ $.noConflict();
                     timerName = "Kan bygga " + timerName + " i " + hb.activeVillage.name;
                 }
 
+                if(jQuery(this).closest(".contractWrapper").length > 0){
+                    timerName = jQuery.trim(jQuery(this).closest(".roundedCornersBox").find("h4").text());
+                    timerName = "Kan uppgradera " + timerName + " i " + hb.activeVillage.name;
+                }
+
                 timerName = timerName.replace(/\t/g, "");
 
                 var timerValue = parseInt(jQuery(this).attr("value"));
@@ -713,6 +718,7 @@ $.noConflict();
 
         this.showConstructionTimer = function(){
             jQuery(".buildingWrapper .contractCosts .statusMessage span.hide").removeClass("hide").css("margin-left","10px");
+            jQuery(".contractWrapper .contractCosts .statusMessage span.hide").removeClass("hide").css("margin-left","10px").css("display","block");
         };
 
         this.simulateInput = function(element, text){
