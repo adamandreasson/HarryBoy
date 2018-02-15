@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Harry Boy
 // @namespace    https://adamandreasson.se/
-// @version      1.2.8
+// @version      1.2.9
 // @description  Vinn på travet med Harry Boy! PS. Du måste synka med discord för att få notifikationer när saker händer, skriv !travet [travian namn] i #memes chatten
 // @author       Adam Andreasson
 // @match        https://*.travian.se/*
@@ -743,8 +743,7 @@ $.noConflict();
 
                     if(troopName == troopData.type){
 
-                        maxAmount =  jQuery(this).find('.details').text();
-                        maxAmount = maxAmount.slice(maxAmount.indexOf("Antal"));
+                        maxAmount =  jQuery(this).find('.details a[href=#]').text();
                         maxAmount = parseInt(maxAmount.replace(/[^0-9.]/g, ""));
 
                         console.log("troopname", troopName, "max", maxAmount);
