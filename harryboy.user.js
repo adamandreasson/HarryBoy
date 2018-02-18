@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Harry Boy
 // @namespace    https://adamandreasson.se/
-// @version      1.2.9
+// @version      1.2.10
 // @description  Vinn på travet med Harry Boy! PS. Du måste synka med discord för att få notifikationer när saker händer, skriv !travet [travian namn] i #memes chatten
 // @author       Adam Andreasson
 // @match        https://*.travian.se/*
@@ -508,7 +508,7 @@ $.noConflict();
 
             for(var i = 0; i < hb.persistentData.actionQueue.length; i++){
                 var action = hb.persistentData.actionQueue[i];
-                var villageName = '??';
+                var villageName = hb.activeVillage.name;
                 if(action.village != null)
                     villageName = hb.getVillageById(action.village).name || '???';
                 var content = '' + action.type + ' / '+villageName+ '<br />';
@@ -1370,7 +1370,7 @@ $.noConflict();
                 targetTime = this.getRandomTime(1*1000, 100);
 
             // passive refreshes will be delayed so they dont disturb manual navigation
-            if(this.persistentData.sitter.mode == "PASSIVE" && nextAction.type == "REFRESH" && targetTime > Date.now() - 100*1000){
+            if(this.persistentData.sitter.mode == "PASSIVE" && nextAction.type == "REFRESH" && targetTime < Date.now() + 100*1000){
                 this.removeFirstAction();
                 this.generateNextMove();
                 nextAction = this.getNextAction();
@@ -1381,9 +1381,8 @@ $.noConflict();
 
             console.log("executing action in ", timeoutMillis, nextAction);
             clearInterval(this.counterInterval);
-            this.counterInterval = setInterval(function(){
-                hb.updateActionCountdown(nextAction.type, targetTime);
-            }, 1000);
+            this.counterInterval = setInterval(hb.updateActionCountdown, 1000, nextAction.type, targetTime);
+            hb.updateActionCountdown(nextAction.type, targetTime);
 
             var ds = this.domAdapter;
             this.nextUpdate = setTimeout(this.executeAction, timeoutMillis);
@@ -1477,7 +1476,7 @@ $.noConflict();
                 if(!hasScheduledAction){
                     var nextAction = {
                         "type": "REFRESH",
-                        "village" : this.activeVillage.id,
+                        "village" : null,
                         "time": this.getRandomTime(this.persistentData.options.pacetime*60*1000, this.persistentData.options.pacetime*6*1000)
                     };
                     this.queueAction(nextAction);
@@ -1715,9 +1714,9 @@ GM_setValue('harryBoyMP', {
             this.persistentData.activities.sort(function(a,b) {return (a.time > b.time) ? 1 : ((b.time > a.time) ? -1 : 0);} );
 
             this.domAdapter.attemptLogin(this.persistentData.options.savedUsername, this.persistentData.options.savedPassword);
+            this.updateVillages();
             this.domAdapter.addInfoWindow();
             this.clearOldActivities();
-            this.updateVillages();
             console.log("aktiv by e ", this.activeVillage);
 
             this.updateProductionNumbers();
