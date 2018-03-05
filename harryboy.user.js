@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Harry Boy
 // @namespace    https://adamandreasson.se/
-// @version      1.2.11
+// @version      1.2.12
 // @description  Vinn på travet med Harry Boy! PS. Du måste synka med discord för att få notifikationer när saker händer, skriv !travet [travian namn] i #memes chatten
 // @author       Adam Andreasson
 // @match        https://*.travian.se/*
@@ -814,6 +814,31 @@ $.noConflict();
 
         };
 
+        this.addTotalProduction = function(){
+
+            var villages = hb.persistentData.villages;
+            var totalProd = [0,0,0,0];
+
+            for(var v in villages){
+                var village = villages[v];
+                if(village.production == null)
+                    continue;
+
+                for(var r in village.production.numbers){
+                    totalProd[r] += village.production.numbers[r];
+
+                }
+            }
+
+            var dom = '<div>Total produktion: ';
+            for(var r = 0; r < totalProd.length; r++){
+                dom += totalProd[r] + ' ' + resourceNames[r+1] + ', ';
+            }
+            dom += '</div>';
+            jQuery("#footer").append(dom);
+
+        };
+
         this.sendTroops = function(action){
 
             if(action.stage == "START" || action.stage == "PREPARE"){
@@ -1353,7 +1378,7 @@ $.noConflict();
                 return;
             }
 
-            if(nextAction.village != this.activeVillage.id && nextAction.type != "CHANGE_VILLAGE" && nextAction.village !== null){
+            if(nextAction.village != this.activeVillage.id && nextAction.type != "CHANGE_VILLAGE" && nextAction.village !== null && nextAction.type != "REFRESH"){
 
                 nextAction = {
                 "type": "CHANGE_VILLAGE",
@@ -1728,6 +1753,7 @@ GM_setValue('harryBoyMP', {
             this.domAdapter.addAttackScheduler();
             this.domAdapter.addVillageSelector(this.persistentData.villages);
             this.domAdapter.formatStats();
+            this.domAdapter.addTotalProduction();
             this.domAdapter.addFoxSettings();
             this.domAdapter.addTradeRouteMenu();
             this.domAdapter.showConstructionTimer();
