@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Harry Boy
 // @namespace    https://adamandreasson.se/
-// @version      1.2.14
+// @version      1.2.15
 // @description  Vinn på travet med Harry Boy! PS. Du måste synka med discord för att få notifikationer när saker händer, skriv !travet [travian namn] i #memes chatten
 // @author       Adam Andreasson
 // @match        https://*.travian.se/*
@@ -726,7 +726,11 @@ $.noConflict();
                 var currentCoords = hb.activeVillage.coords;
                 var dist = Math.sqrt(Math.pow(toNumbersOnly(coords.x)-toNumbersOnly(currentCoords.x), 2) + Math.pow(toNumbersOnly(coords.y)-toNumbersOnly(currentCoords.y), 2));
                 dist = dist.toFixed(1);
-                jQuery(this).append('<span style="font-size:0.9em;margin-left:-1em;">'+dist+'</span>');
+
+                var angleDeg = Math.atan2(toNumbersOnly(coords.y) - toNumbersOnly(currentCoords.y), toNumbersOnly(coords.x) - toNumbersOnly(currentCoords.x)) * 180 / Math.PI;
+                angleDeg = -Math.round(angleDeg);
+                console.log(coords, angleDeg);
+                jQuery(this).append('<span style="width: 5em;display: inline-block;margin:0 -0.5em 0 -2em;text-align:right;"><span style="font-size:0.9em;">'+dist+'</span> <span style="transform: rotate('+angleDeg+'deg);display:inline-block;font-size:1.2em;">&rarr;</span></span>');
             });
 
         };
