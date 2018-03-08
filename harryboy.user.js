@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Harry Boy
 // @namespace    https://adamandreasson.se/
-// @version      1.2.16
+// @version      1.2.17
 // @description  Vinn på travet med Harry Boy! PS. Du måste synka med discord för att få notifikationer när saker händer, skriv !travet [travian namn] i #memes chatten
 // @author       Adam Andreasson
 // @match        https://*.travian.se/*
@@ -381,7 +381,10 @@ $.noConflict();
             jQuery(".max.LTR").append(dom);
 
             jQuery("body").on("click", ".hbTradeAll", function() {
-                self.simulateInput(jQuery(this).parent().siblings(".val").find("input").get(0), "999999");
+                const btn = jQuery(this).siblings();
+                while (!btn.hasClass("notClickable")) {
+                    btn.trigger("click");
+                }
             });
         };
 
