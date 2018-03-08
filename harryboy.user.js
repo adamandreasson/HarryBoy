@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Harry Boy
 // @namespace    https://adamandreasson.se/
-// @version      1.2.13
+// @version      1.2.14
 // @description  Vinn på travet med Harry Boy! PS. Du måste synka med discord för att få notifikationer när saker händer, skriv !travet [travian namn] i #memes chatten
 // @author       Adam Andreasson
 // @match        https://*.travian.se/*
@@ -717,6 +717,18 @@ $.noConflict();
                     jQuery(this).html(number.toLocaleString());
                 });
             }
+        };
+
+        this.addVillageDistanceCalculation = function(){
+            jQuery("table#villages td.coords").each(function(){
+                var coords = jQuery(this).find(".coordinates").text().replace(/\(|\)/g, "").split("|");
+                coords = {x: coords[0], y: coords[1]};
+                var currentCoords = hb.activeVillage.coords;
+                var dist = Math.sqrt(Math.pow(toNumbersOnly(coords.x)-toNumbersOnly(currentCoords.x), 2) + Math.pow(toNumbersOnly(coords.y)-toNumbersOnly(currentCoords.y), 2));
+                dist = dist.toFixed(1);
+                jQuery(this).append('<span style="font-size:0.9em;margin-left:-1em;">'+dist+'</span>');
+            });
+
         };
 
         this.showConstructionTimer = function(){
@@ -1755,6 +1767,7 @@ GM_setValue('harryBoyMP', {
             this.domAdapter.addAttackScheduler();
             this.domAdapter.addVillageSelector(this.persistentData.villages);
             this.domAdapter.formatStats();
+            this.domAdapter.addVillageDistanceCalculation();
             this.domAdapter.addTotalProduction();
             this.domAdapter.addFoxSettings();
             this.domAdapter.addTradeRouteMenu();
