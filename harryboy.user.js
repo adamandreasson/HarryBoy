@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Harry Boy
 // @namespace    https://adamandreasson.se/
-// @version      1.2.15
+// @version      1.2.16
 // @description  Vinn på travet med Harry Boy! PS. Du måste synka med discord för att få notifikationer när saker händer, skriv !travet [travian namn] i #memes chatten
 // @author       Adam Andreasson
 // @match        https://*.travian.se/*
@@ -368,6 +368,20 @@ $.noConflict();
                     return alert('Hallå du måste välja några råvaror också');
 
                 new TradeRouteFactory(opts, minHour, maxHour).start();
+            });
+        };
+
+        this.addMarketShortcuts = function(){
+            if (jQuery("#send_select").length === 0) {
+                return;
+            }
+
+            const self = this;
+            const dom = '<a class="hbTradeAll" href="#">Allt</a>';
+            jQuery(".max.LTR").append(dom);
+
+            jQuery("body").on("click", ".hbTradeAll", function() {
+                self.simulateInput(jQuery(this).parent().siblings(".val").find("input").get(0), "999999");
             });
         };
 
@@ -1775,6 +1789,7 @@ GM_setValue('harryBoyMP', {
             this.domAdapter.addTotalProduction();
             this.domAdapter.addFoxSettings();
             this.domAdapter.addTradeRouteMenu();
+            this.domAdapter.addMarketShortcuts();
             this.domAdapter.showConstructionTimer();
             this.domAdapter.registerKeyBindings();
         };
