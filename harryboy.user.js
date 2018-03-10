@@ -401,7 +401,7 @@ $.noConflict();
 
                 if(jQuery(this).closest(".buildingList").length > 0){
                     timerName = jQuery.trim(jQuery(this).parent().parent().children(".name").text());
-                    timerName = timerName.replace("Nivå", " Nivå");
+                    timerName = timerName.replace("Nivå", " Nivå").replace("Level", " Level");
                 }
 
                 if(jQuery(this).closest("#movements").length > 0){
@@ -430,6 +430,11 @@ $.noConflict();
                 if(jQuery(this).closest(".contractWrapper").length > 0){
                     timerName = jQuery.trim(jQuery(this).closest(".roundedCornersBox").find("h4").text());
                     timerName = "Kan uppgradera " + timerName + " i " + hb.activeVillage.name;
+                }
+
+                if(jQuery(this).closest("#demolish").length > 0){
+                    timerName = jQuery(this).closest("tr").find("td").eq(1).text().trim();
+                    timerName = "Rivning av " + timerName;
                 }
 
                 timerName = timerName.replace(/\t/g, "");
