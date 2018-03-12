@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Harry Boy
 // @namespace    https://adamandreasson.se/
-// @version      1.2.19
+// @version      1.2.20
 // @description  Vinn på travet med Harry Boy! PS. Du måste synka med discord för att få notifikationer när saker händer, skriv !travet [travian namn] i #memes chatten
 // @author       Adam Andreasson
 // @match        https://*.travian.se/*
@@ -194,6 +194,32 @@ $.noConflict();
             function getResourceDom(type, value) {
                 return '<span class="resource"><img class="r' + type + '" src="img/x.gif"> ' + value + ' </span>';
             }
+        };
+
+        this.addTroopProductionSummary = function(){
+            if (jQuery(".village3 #overview").length == 0)
+                return;
+
+            var queue = {};
+
+            jQuery(".village3 #overview td.tro img").each(function(){
+                console.log(jQuery(this).attr('class'));
+                var classes = jQuery(this).attr('class');
+                if(queue[classes] == null){
+                    queue[classes] = 0;
+                }
+                queue[classes] += toNumbersOnly(jQuery(this).attr("alt"));
+            });
+
+            console.log(queue);
+
+            var dom = "";
+            for(var type in queue){
+                dom += '<img class="'+type+'" src="img/x.gif"> x '+ queue[type] +'<br>';
+            }
+
+            jQuery(".village3").append("<h3>Totalt i kö:</h3> " + dom);
+
         };
 
         this.getMovementList = function(){
@@ -1826,6 +1852,7 @@ GM_setValue('harryBoyMP', {
             this.domAdapter.addTradeRouteMenu();
             this.domAdapter.addMarketShortcuts();
             this.domAdapter.addLootSummary();
+            this.domAdapter.addTroopProductionSummary();
             this.domAdapter.showConstructionTimer();
             this.domAdapter.registerKeyBindings();
         };
