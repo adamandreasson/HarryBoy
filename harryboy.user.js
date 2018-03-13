@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Harry Boy
 // @namespace    https://adamandreasson.se/
-// @version      1.2.20
+// @version      1.2.21
 // @description  Vinn på travet med Harry Boy! PS. Du måste synka med discord för att få notifikationer när saker händer, skriv !travet [travian namn] i #memes chatten
 // @author       Adam Andreasson
 // @match        https://*.travian.se/*
@@ -1332,6 +1332,17 @@ $.noConflict();
                 for(var m in movements){
                     var movement = movements[m];
                     if(movement.type == "ATTACK" || movement.type == "ATTACK_SELF" || movement.type == "ATTACK_OUT"){
+                        if(movement.url == null){
+
+                            var attackDetails = {"type": "ATTACK", "from": "???", "time": Date.now()+60*100};
+                            this.persistentData.activities.push(attackDetails);
+                            this.saveData();
+                            console.log("alerting of incoming attack but no thingamabob in village");
+
+                            this.plebbeAlerter.sendAlert(this.user, data.type + " kommer i " + (this.activeVillage.name || "???") + " från " + data.from + " kl ??", Date.now()/1000);
+
+                            return;
+                        }
                         console.log(movement.url);
                         this.domAdapter.goToUrl(movement.url);
                         return;
