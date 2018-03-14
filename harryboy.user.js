@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Harry Boy
 // @namespace    https://adamandreasson.se/
-// @version      1.2.21
+// @version      1.2.22
 // @description  Vinn på travet med Harry Boy! PS. Du måste synka med discord för att få notifikationer när saker händer, skriv !travet [travian namn] i #memes chatten
 // @author       Adam Andreasson
 // @match        https://*.travian.se/*
@@ -889,6 +889,10 @@ $.noConflict();
             if(hb.persistentData.options.resourceWarning)
                 checkd = 'checked';
             dom += 'varning vid fullt magasin <input type="checkbox" class="hb-setting" value="checkbox" setting="resourceWarning" '+checkd+'><br>';
+            var checkd = '';
+            if(hb.persistentData.options.troopBuildMsg)
+                checkd = 'checked';
+            dom += 'meddela när trupper byggs <input type="checkbox" class="hb-setting" value="checkbox" setting="troopBuildMsg" '+checkd+'><br>';
             dom += GM_info.script.name + ' v' + GM_info.script.version + ' - uppdaterades ' + new Date(GM_info.script.lastModified).toLocaleString('sv-SE');
             dom += '</div>';
 
@@ -1411,7 +1415,9 @@ $.noConflict();
 
             if(numTroops > 1){
                 console.log("building", numTroops);
-                this.plebbeAlerter.sendAlert(this.user, "Bygger " + numTroops + " " + triggerAction.troopData.name + " i " + this.getVillageById(triggerAction.troopData.village).name, Date.now()/1000);
+
+                if(hb.persistentData.options.troopBuildMsg)
+                    this.plebbeAlerter.sendAlert(this.user, "Bygger " + numTroops + " " + triggerAction.troopData.name + " i " + this.getVillageById(triggerAction.troopData.village).name, Date.now()/1000);
                 setTimeout(this.domAdapter.buildTroopsCommit, 2000);
             }else{
                 console.log("aw man cant build anytihng....");
