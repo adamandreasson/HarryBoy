@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Harry Boy
 // @namespace    https://adamandreasson.se/
-// @version      1.2.22
+// @version      1.2.23
 // @description  Vinn på travet med Harry Boy! PS. Du måste synka med discord för att få notifikationer när saker händer, skriv !travet [travian namn] i #memes chatten
 // @author       Adam Andreasson
 // @match        https://*.travian.se/*
@@ -443,11 +443,6 @@ $.noConflict();
 
         this.addCountdownAlarmButtons = function(){
 
-            //why make it compliccat even ezier to debug this wae
-            function getAlertHash(name, goalTime){
-                return name+"|"+Math.round(goalTime/10);
-            }
-
             jQuery(".timer[counting=down]").each(function(){
 
                 var timerName = "okänd timer";
@@ -502,8 +497,7 @@ $.noConflict();
 
                 var alertLog = hb.getAlertLog();
                 for(var i = 0; i < alertLog.length; i++){
-                    console.log(alertLog[i].hash, "|||", getAlertHash(name,goalTime));
-                    if(alertLog[i].hash == getAlertHash(name,goalTime))
+                    if(alertLog[i].name == name && Math.abs(alertLog[i].goal - goalTime) <= 2)
                         content = '✓';
                 }
 
@@ -511,8 +505,10 @@ $.noConflict();
             });
 
             jQuery("body").on("click", ".harryBoyStart", function(event){
+                event.preventDefault();
+
                 if (jQuery(this).text() == "✓")
-                    return;
+                    return false;
 
                 jQuery(this).text("✓");
                 var name = jQuery(this).attr("hbName");
@@ -520,11 +516,9 @@ $.noConflict();
                 console.log("name", name, "goal", goal, "user", hb.user);
 
                 hb.plebbeAlerter.sendAlert(hb.user, name, goal);
-                hb.addAlertLog({"time": Date.now(), "hash": getAlertHash(name, goal)});
+                hb.addAlertLog({"name": name, "goal": goal});
 
-                event.preventDefault();
                 return false;
-
             });
 
         };
@@ -1054,11 +1048,8 @@ $.noConflict();
         this.addAlertLog = function(entry){
             this.persistentData.alerts.push(entry);
 
-            var nowRounded = Math.round(Date.now() / 10000);
-            this.persistentData.alerts = this.persistentData.alerts.filter(alert => {
-                var goalTime = alert.hash.match(/\|(\d+)/)[1];
-                return goalTime > nowRounded;
-            });
+            var nowRounded = Math.round(Date.now() / 1000);
+            this.persistentData.alerts = this.persistentData.alerts.filter(alert => alert.goal > nowRounded);
 
             this.saveData();
         };
@@ -1769,6 +1760,15 @@ $.noConflict();
                 this.persistentData.version = 4;
                 this.saveData();
             }
+
+            if (this.persistentData.version < 5) {
+                // 4 --> 5
+                // Reset alert data
+                this.persistentData.alerts = [];
+                this.persistentData.version = 5;
+                this.saveData();
+            }
+
         };
 
         this.updateOption = function(option, value){
@@ -1824,7 +1824,7 @@ GM_setValue('harryBoyMP', {
                     "savedUsername": null,
                     "savedPassword": null
                 },
-                "version": 4
+                "version": 5
             };
 
             var server = this.domAdapter.getServer();
