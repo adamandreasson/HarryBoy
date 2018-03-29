@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Harry Boy
 // @namespace    https://adamandreasson.se/
-// @version      1.3.0
+// @version      1.3.1
 // @description  Vinn på travet med Harry Boy! PS. Du måste synka med discord för att få notifikationer när saker händer, skriv !travet [travian namn] i #memes chatten
 // @author       Adam Andreasson
 // @match        https://*.travian.se/*
@@ -200,12 +200,17 @@ $.noConflict();
 
                     var previous = lootEntries[index].last();
 
-                    // Account for production
-                    var hourDiff = (at.getTime() - previous.x.getTime()) / 3600000;
-                    var yBeforeLoot = Math.round(previous.y + hourDiff * production[index]);
+                    if (previous.x.getTime() == at.getTime() + 1) {
+                        // Two returning on same second => merge values
+                        previous.y += loot;
+                    } else {
+                        // Account for production
+                        var hourDiff = (at.getTime() - previous.x.getTime()) / 3600000;
+                        var yBeforeLoot = Math.round(previous.y + hourDiff * production[index]);
 
-                    lootEntries[index].push({x:at, y: yBeforeLoot});
-                    lootEntries[index].push({x: new Date(at.getTime() + 1), y: yBeforeLoot + loot});
+                        lootEntries[index].push({x:at, y: yBeforeLoot});
+                        lootEntries[index].push({x: new Date(at.getTime() + 1), y: yBeforeLoot + loot});
+                    }
                 });
             });
 
