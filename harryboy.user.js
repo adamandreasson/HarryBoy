@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Harry Boy
 // @namespace    https://adamandreasson.se/
-// @version      1.4.1
+// @version      1.4.2
 // @description  Vinn på travet med Harry Boy! PS. Du måste synka med discord för att få notifikationer när saker händer, skriv !travet [travian namn] i #memes chatten
 // @author       Adam Andreasson
 // @match        https://*.travian.se/*
@@ -194,6 +194,7 @@ $.noConflict();
                 });
             });
 
+            resourceChart.beautify();
             jQuery("a[name=at]").eq(0).after(resourceChart.initDom());
             resourceChart.render();
         };
@@ -232,6 +233,7 @@ $.noConflict();
                 });
             });
 
+            resourceChart.beautify();
             jQuery("#merchantsOnTheWayFormular").before(resourceChart.initDom());
             resourceChart.render();
         };
@@ -260,6 +262,17 @@ $.noConflict();
 
                     this.entries[resource].push({x: date, y: yBeforeLoot});
                     this.entries[resource].push({x: new Date(date.getTime() + 1), y: yBeforeLoot + loot});
+                }
+            };
+
+            this.beautify = function() {
+                // Prolong the graph by 5% of its time frame
+                var lastTime = this.entries[0].last().x.getTime();
+                var timeFrame = lastTime - this.entries[0][0].x.getTime();
+                var tailDate = new Date(lastTime + timeFrame / 20);
+
+                for (var r = 0; r < this.entries.length; r++) {
+                    this.addEntry(r, tailDate, 0);
                 }
             };
 
