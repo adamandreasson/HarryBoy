@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Harry Boy
 // @namespace    https://adamandreasson.se/
-// @version      1.4.0
+// @version      1.4.1
 // @description  Vinn på travet med Harry Boy! PS. Du måste synka med discord för att få notifikationer när saker händer, skriv !travet [travian namn] i #memes chatten
 // @author       Adam Andreasson
 // @match        https://*.travian.se/*
@@ -10,7 +10,6 @@
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @require      https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js
-// @require      https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.21.0/moment.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/chartist/0.11.0/chartist.min.js
 // @downloadURL  https://adamandreasson.se/harryboy/harryboy.user.js
 // ==/UserScript==
@@ -185,12 +184,13 @@ $.noConflict();
 
             // Each returning raid
             returning.each(function(){
-                var date = jQuery(this).find(".at").text().trim().substr(3);
-                date = moment(date, "HH:mm:ss").toDate();
+                var date = jQuery(this).find(".timer").attr("value");
+                date = new Date(Date.now() + date * 1000);
 
                 jQuery(this).find(".resource").each(function(index) {
                     var loot = toNumbersOnly(jQuery(this).text());
                     resourceChart.addEntry(index, date, loot);
+                    console.log(date.toString(), index, resourceNames[index+1], loot);
                 });
             });
 
@@ -216,18 +216,19 @@ $.noConflict();
 
             var resourceChart = new ResourceChart();
 
-            merchants.each(function(index) {
-                if (index > endIndex) {
+            merchants.each(function() {
+                if (jQuery(this).index() > endIndex) {
                     return;
                 }
 
-                var date = jQuery(this).find(".at").text().trim().substr(3);
-                date = moment(date, "HH:mm:ss").toDate();
+                var date = jQuery(this).find(".timer").attr('value');
+                date = new Date(Date.now() + date * 1000);
 
                 // Parse resources
                 jQuery(this).find("tr.res td span img").each(function(index) {
                     var resources = toNumbersOnly(this.nextSibling.nodeValue);
                     resourceChart.addEntry(index, date, resources);
+                    console.log(date.toString(), index, resourceNames[index+1], resources);
                 });
             });
 
@@ -296,8 +297,8 @@ $.noConflict();
                         lineSmooth: Chartist.Interpolation.none(),
                         axisX: {
                             type: Chartist.FixedScaleAxis,
-                            divisor: 5,
-                            labelInterpolationFnc: val => moment(val).format('HH:mm:ss') // TODO val.toString() and remove moment
+                            divisor: 7,
+                            labelInterpolationFnc: val => new Date(val).toString()
                         }
                     });
             };
